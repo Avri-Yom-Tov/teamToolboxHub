@@ -6,5 +6,6 @@
 
 
 
-Use the Jenkins MCP server to trigger a build for the current project. Locate the appropriate Jenkins pipeline job, and provide the build URL for tracking.
+Use the Jenkins MCP server to trigger a build for the current project.
+Locate the appropriate Jenkins pipeline job, and provide the build URL for tracking.
 
