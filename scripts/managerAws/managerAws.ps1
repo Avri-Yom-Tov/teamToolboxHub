@@ -18,7 +18,7 @@ $Global:StopRequested = $false
 
 # Configuration - Update these with your values ..
 
-$user = 'Avraham.Yom-Tov' 
+$user = 'xxxx' 
 $DEFAULT_SESSION = "default"
 $default_region = 'us-west-2'
 $source_profile = 'nice-identity' 
