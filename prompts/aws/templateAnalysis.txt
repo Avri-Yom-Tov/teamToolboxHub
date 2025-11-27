@@ -1,3 +1,5 @@
+
+
 Analyze the existing yml.j2 template. 
 Use the AWS Documentation MCP Server to fetch up-to-date best practices and recommended configurations for all AWS services 
 used in this template. Propose improvements and corrections based strictly on the official documentation, 
