@@ -1,0 +1,11 @@
+
+
+
+
+
+Analyze all project dependencies. For each dependency, 
+use Context7 to fetch the most up-to-date and version-specific documentation and 
+recommended usage patterns. If a newer compatible version exists, update the dependency version in package.json. 
+If the updated version requires different API usage, apply the necessary code changes throughout the project to match
+the recommended implementation.
+

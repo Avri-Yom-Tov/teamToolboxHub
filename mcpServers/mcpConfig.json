@@ -1,0 +1,49 @@
+{
+    "servers": {
+        "sonarqube": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "sonarqube-mcp-server@latest"
+            ],
+            "env": {
+                "SONARQUBE_URL": "https://sonar.nice.com",
+                "SONARQUBE_TOKEN": "https://sonar.nice.com/account/security"
+            }
+        },
+        "context7": {
+            "type": "stdio",
+            "command": "npx",
+            "args": [
+                "-y",
+                "@upstash/context7-mcp",
+                "--api-key",
+                "http://context7.com/dashboard"
+            ]
+        },
+        "awsDocumentationMcpServer": {
+            "command": "uvx",
+            "args": [
+                "awslabs.aws-documentation-mcp-server@latest"
+            ],
+            "env": {
+                "FASTMCP_LOG_LEVEL": "ERROR",
+                "AWS_DOCUMENTATION_PARTITION": "aws"
+            },
+            "disabled": false,
+            "autoApprove": [],
+            "type": "stdio",
+            "documentation": "https://awslabs.github.io/mcp/servers/aws-documentation-mcp-server"
+        },
+        "jenkins": {
+            "command": "uvx",
+            "args": [
+                "mcp-jenkins",
+                "--jenkins-url=https://cxone-ci.niceincontact.com",
+                "--jenkins-username=xxx",
+                "--jenkins-password=xxx"
+            ],
+            "type": "stdio"
+        }
+    }
+}

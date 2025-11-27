@@ -1,0 +1,17 @@
+
+
+
+
+
+
+
+
+MCP GitHub Repository
+https://github.com/mcp
+
+SonarQube Security Dashboard
+https://sonar.nice.com/account/security
+
+UV Windows Download (x86_64)
+https://github.com/astral-sh/uv/releases/download/0.9.9/uv-x86_64-pc-windows-msvc.zip
+
