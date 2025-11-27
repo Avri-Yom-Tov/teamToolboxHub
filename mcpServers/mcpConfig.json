@@ -44,6 +44,25 @@
                 "--jenkins-password=xxx"
             ],
             "type": "stdio"
-        }
+        },
+        "mcpTime": {
+			"command": "uvx",
+			"args": [
+				"mcp-server-time"
+			],
+			"type": "stdio"
+		},
+		"awsCloudwatch": {
+			"command": "uvx",
+			"args": [
+				"--from",
+				"awslabs.cloudwatch-mcp-server@latest",
+				"awslabs.cloudwatch-mcp-server.exe"
+			],
+			"env": {
+				"FASTMCP_LOG_LEVEL": "ERROR"
+			},
+			"type": "stdio"
+		}
     }
 }
