@@ -18,7 +18,7 @@ $Global:StopRequested = $false
 
 # Configuration - Update these with your values ..
 
-$user = 'xxxx' 
+$user = 'Avraham.Yom-Tov' 
 $DEFAULT_SESSION = "default"
 $default_region = 'us-west-2'
 $source_profile = 'nice-identity' 
@@ -28,14 +28,18 @@ $CODEARTIFACT_SESSION = "default-codeartifact"
 $role_name = 'GroupAccess-Developers-Recording'
 $target_account_num_codeartifact = '369498121101' 
 $m2_config_file = "C:\Users\$env:UserName\.m2\settings.xml"
-$target_profile_name_codeartifact = 'GroupAccess-NICE-Developers' 
+$target_profile_name_codeartifact = 'GroupAccess-NICE-Developers'
+$mfa_secret_key = $env:mfaSecretKey
 
 $Global:AccountList = @(
     [PSCustomObject]@{ AccountId = 730335479582; Name = "rec-dev" }
     [PSCustomObject]@{ AccountId = 211125581625; Name = "rec-test" }
     [PSCustomObject]@{ AccountId = 339712875220; Name = "rec-perf" }
+    [PSCustomObject]@{ AccountId = 918987959928; Name = "production" }
     [PSCustomObject]@{ AccountId = 891377049518; Name = "rec-staging" }
     [PSCustomObject]@{ AccountId = 934137132601; Name = "dev-test-perf" }
+    [PSCustomObject]@{ AccountId = 654654430801; Name = "production-rec" }
+    [PSCustomObject]@{ AccountId = 891377174057; Name = "production-rec-uk" }
 )
 
 try {
@@ -51,6 +55,60 @@ try {
 #endregion
 
 #region Utility Functions
+function New-TOTPCode {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Secret
+    )
+    
+    try {
+        $Secret = $Secret.ToUpper().Replace(" ", "")
+        
+        $base32Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
+        $bits = ""
+        
+        foreach ($char in $Secret.ToCharArray()) {
+            $index = $base32Chars.IndexOf($char)
+            if ($index -eq -1) {
+                throw "Invalid Base32 character: $char"
+            }
+            $bits += [Convert]::ToString($index, 2).PadLeft(5, '0')
+        }
+        
+        $byteCount = [Math]::Floor($bits.Length / 8)
+        $secretBytes = New-Object byte[] $byteCount
+        
+        for ($i = 0; $i -lt $byteCount; $i++) {
+            $byte = $bits.Substring($i * 8, 8)
+            $secretBytes[$i] = [Convert]::ToByte($byte, 2)
+        }
+        
+        $epoch = [Math]::Floor([DateTimeOffset]::UtcNow.ToUnixTimeSeconds() / 30)
+        $timeBytes = New-Object byte[] 8
+        for ($i = 7; $i -ge 0; $i--) {
+            $timeBytes[$i] = [byte]($epoch -band 0xFF)
+            $epoch = $epoch -shr 8
+        }
+        
+        $hmac = New-Object System.Security.Cryptography.HMACSHA1
+        $hmac.Key = $secretBytes
+        $hash = $hmac.ComputeHash($timeBytes)
+        
+        $offset = $hash[$hash.Length - 1] -band 0x0F
+        $binary = (($hash[$offset] -band 0x7F) -shl 24) -bor
+                  (($hash[$offset + 1] -band 0xFF) -shl 16) -bor
+                  (($hash[$offset + 2] -band 0xFF) -shl 8) -bor
+                  ($hash[$offset + 3] -band 0xFF)
+        
+        $otp = $binary % 1000000
+        
+        return $otp.ToString("D6")
+        
+    } catch {
+        Write-Host "Error generating TOTP: $($_.Exception.Message)"
+        return $null
+    }
+}
 function Write-StatusBar {
     param (
         [Parameter(Mandatory = $false)]
@@ -807,15 +865,30 @@ $Global:WPFGui.StartButton.Add_Click({
             return
         }
 
-        $mfaCode = Show-MFADialog
-        if (-not $mfaCode) {
-            Write-Log "MFA authentication cancelled by user."
-            return
-        }
+        $mfaCode = $null
+        
+        if ([string]::IsNullOrWhiteSpace($mfa_secret_key)) {
+            $mfaCode = Show-MFADialog
+            if (-not $mfaCode) {
+                Write-Log "MFA authentication cancelled by user."
+                return
+            }
 
-        if ($mfaCode.Length -ne 6 -or -not ($mfaCode -match '^\d{6}$')) {
-            [System.Windows.MessageBox]::Show("Please enter a valid 6-digit MFA code.", "Invalid MFA Code", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning)
-            return
+            if ($mfaCode.Length -ne 6 -or -not ($mfaCode -match '^\d{6}$')) {
+                [System.Windows.MessageBox]::Show("Please enter a valid 6-digit MFA code.", "Invalid MFA Code", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning)
+                return
+            }
+        } else {
+            Write-Log "Generating MFA code automatically from secret key..."
+            $mfaCode = New-TOTPCode -Secret $mfa_secret_key
+            
+            if (-not $mfaCode) {
+                Write-Log "Failed to generate MFA code. Please check your secret key."
+                [System.Windows.MessageBox]::Show("Failed to generate MFA code automatically. Please check your secret key configuration.", "MFA Generation Error", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Error)
+                return
+            }
+            
+            Write-Log "MFA code generated successfully: $mfaCode"
         }
 
         Write-Log "Starting AWS credential process for $($selectedAccount.Name) ($($selectedAccount.AccountId))"
