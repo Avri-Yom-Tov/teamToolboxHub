@@ -799,3 +799,13 @@ def main():
 if __name__ == '__main__':
     main()
 
+
+
+
+
+
+
+
+
+# pyinstaller --onefile --windowed --name "AWSCredentialsManager" --icon "your_icon.ico" --add-data "background.jpg;." awsManager.py
+# pyinstaller --onefile --windowed --name "AWSCredentialsManager" --add-data "background.jpg;." --hidden-import "qfluentwidgets" --hidden-import "qframelesswindow" awsManager.py
