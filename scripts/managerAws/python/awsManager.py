@@ -51,7 +51,7 @@ AWS_ACCOUNTS = [
 ]
 
 CONFIG = {
-    "user": "Avraham.Yom-Tov",
+    "user": os.environ.get("awsUserName", "Avraham.Yom-Tov"),
     "token_expiration_hours": 36,
     "default_region": "us-west-2",
     "source_profile": "nice-identity",
