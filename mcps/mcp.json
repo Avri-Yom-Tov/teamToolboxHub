@@ -39,7 +39,7 @@
             "command": "uvx",
             "args": [
                 "mcp-jenkins",
-                "--jenkins-url=https://cxone-ci.niceincontact.com",
+                "--jenkins-url=https://cxone-ci.devops.niceincontact.com",
                 "--jenkins-username=xxx",
                 "--jenkins-password=xxx"
             ],
