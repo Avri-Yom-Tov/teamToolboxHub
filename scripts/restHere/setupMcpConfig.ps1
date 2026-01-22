@@ -1,6 +1,19 @@
 # PowerShell script to setup GitHub Copilot MCP configuration
+# Works on Windows, macOS, and Linux
 
-$mcpPath = "$env:USERPROFILE\AppData\Roaming\Code\User\mcp.json"
+# Detect OS and set appropriate path
+if ($IsWindows -or $env:OS -eq "Windows_NT") {
+    $mcpPath = "$env:USERPROFILE\AppData\Roaming\Code\User\mcp.json"
+} elseif ($IsMacOS) {
+    $mcpPath = "$env:HOME/Library/Application Support/Code/User/mcp.json"
+} elseif ($IsLinux) {
+    $mcpPath = "$env:HOME/.config/Code/User/mcp.json"
+} else {
+    Write-Host "Unsupported operating system" -ForegroundColor Red
+    exit 1
+}
+
+Write-Host "Detected OS path: $mcpPath"
 
 $githubCopilotConfig = @{
     type = "http"
@@ -73,4 +86,4 @@ if (-not (Test-Path $mcpPath)) {
 Write-Host "`nConfiguration applied to: $mcpPath"
 
 # Pause before exiting
-Read-Host -Prompt "`nPress Enter to exit"
+    Read-Host -Prompt "`nPress Enter to exit"
