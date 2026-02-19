@@ -1,14 +1,8 @@
+console.log('Starting tenant search script...');​
 
-
-
-
-
-
-
-
-const token = 'here';
-const environment = "dev";
-const searchForTenantId = "11eec997-c663-3860-895b-0242ac110005";
+const token = 'here';​
+const environment = "dev";​
+const searchForTenantId = "11eec997-c663-3860-895b-0242ac110005";​
 
 
 
