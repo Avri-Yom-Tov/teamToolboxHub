@@ -45,3 +45,12 @@ C:\Users\{YourUsername}\AppData\Roaming\Code\User\mcp.json
 
 
 ---
+
+
+
+
+
+
+
+
+"editor.unicodeHighlight.invisibleCharacters": false
