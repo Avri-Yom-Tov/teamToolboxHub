@@ -1,4 +1,4 @@
-# PowerShell script to setup GitHub Copilot MCP configuration
+# PowerShell script to setup GitHub Copilot and Atlassian MCP configuration
 # Works on Windows, macOS, and Linux
 
 # Detect OS and set appropriate path
@@ -23,6 +23,11 @@ $githubCopilotConfig = @{
     }
 }
 
+$atlassianConfig = @{
+    type = "http"
+    url = "https://mcp.atlassian.com/v1/mcp"
+}
+
 # Check if the file exists
 if (-not (Test-Path $mcpPath)) {
     Write-Host "File does not exist ! Creating new mcp.json..."
@@ -37,12 +42,13 @@ if (-not (Test-Path $mcpPath)) {
     $newConfig = @{
         servers = @{
             githubCopilot = $githubCopilotConfig
+            atlassian = $atlassianConfig
         }
     }
     
     # Convert to JSON and save
     $newConfig | ConvertTo-Json -Depth 10 | Set-Content -Path $mcpPath -Encoding UTF8
-    Write-Host "Successfully created mcp.json with GitHub Copilot configuration !"
+    Write-Host "Successfully created mcp.json with GitHub Copilot and Atlassian configuration !"
 } else {
     Write-Host "File exists ! Updating mcp.json ..."
     
@@ -73,10 +79,19 @@ if (-not (Test-Path $mcpPath)) {
             Write-Host "Adding githubCopilot configuration !"
             $existingConfig.servers | Add-Member -MemberType NoteProperty -Name "githubCopilot" -Value ([PSCustomObject]$githubCopilotConfig) -Force
         }
+
+        # Add or update atlassian configuration
+        if ($existingConfig.servers.PSObject.Properties.Name -contains "atlassian") {
+            Write-Host "Updating existing atlassian configuration !"
+            $existingConfig.servers.atlassian = [PSCustomObject]$atlassianConfig
+        } else {
+            Write-Host "Adding atlassian configuration !"
+            $existingConfig.servers | Add-Member -MemberType NoteProperty -Name "atlassian" -Value ([PSCustomObject]$atlassianConfig) -Force
+        }
         
         # Save updated JSON
         $existingConfig | ConvertTo-Json -Depth 10 | Set-Content -Path $mcpPath -Encoding UTF8
-        Write-Host "Successfully updated mcp.json with GitHub Copilot configuration !"
+        Write-Host "Successfully updated mcp.json with GitHub Copilot and Atlassian configuration !"
     } catch {
         Write-Host "Error updating mcp.json :$_" -ForegroundColor Red
         exit 1
