@@ -167,7 +167,7 @@ jobs:
                 <h1>AI Authorship Dashboard</h1>
                 <p>Cross-agent statistics and session analysis to improve your AI-aided development.</p>
               </div>
-              <div class="ts">עודכן: {updated_at}</div>
+              <div class="ts">updated : {updated_at}</div>
             </header>
 
             <div class="grid3">
