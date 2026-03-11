@@ -16,6 +16,8 @@ New-Item -ItemType Directory -Force -Path $configDir | Out-Null
     "disable_version_checks": true,
     "quiet": true
 }
+
+
 "@ | Set-Content -Path $configPath
 
 # 3. קונפיג git גלובלי - דחיפת notes אוטומטית
