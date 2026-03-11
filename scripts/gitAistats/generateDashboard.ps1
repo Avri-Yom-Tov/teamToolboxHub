@@ -20,7 +20,22 @@ if (!(Test-Path $outputDir)) {
 function Get-GitAiStats {
     try {
         Write-Host "Fetching Git AI statistics..." -ForegroundColor Yellow
-        $statsJson = git-ai stats --json 2>&1
+        
+        # Try to find git-ai executable
+        $gitAiPath = $null
+        if (Get-Command git-ai -ErrorAction SilentlyContinue) {
+            $gitAiPath = "git-ai"
+        }
+        elseif (Test-Path "$env:USERPROFILE\.git-ai\bin\git-ai.exe") {
+            $gitAiPath = "$env:USERPROFILE\.git-ai\bin\git-ai.exe"
+        }
+        
+        if (-not $gitAiPath) {
+            Write-Host "Warning: git-ai not found. Install with: irm https://usegitai.com/install.ps1 | iex" -ForegroundColor Yellow
+            return $null
+        }
+        
+        $statsJson = & $gitAiPath stats --json 2>&1
         
         if ($LASTEXITCODE -ne 0) {
             Write-Host "Warning: git-ai stats returned non-zero exit code" -ForegroundColor Yellow
@@ -146,7 +161,7 @@ try {
     
     # Save JSON data
     $jsonPath = Join-Path $outputDir "dashboard-data.json"
-    $dashboardData | ConvertTo-Json -Depth 10 | Out-File -FilePath $jsonPath -Encoding UTF8
+    $dashboardData | ConvertTo-Json -Depth 20 | Out-File -FilePath $jsonPath -Encoding UTF8
     Write-Host "Dashboard data saved to: $jsonPath" -ForegroundColor Green
     
     # Generate HTML dashboard
@@ -158,7 +173,7 @@ try {
         $template = Get-Content $templatePath -Raw
         
         # Replace placeholders
-        $html = $template -replace '{{DASHBOARD_DATA}}', ($dashboardData | ConvertTo-Json -Depth 10 -Compress)
+        $html = $template -replace '{{DASHBOARD_DATA}}', ($dashboardData | ConvertTo-Json -Depth 20 -Compress)
         $html = $html -replace '{{GENERATED_AT}}', $dashboardData.generated_at
         $html = $html -replace '{{REPO_NAME}}', $dashboardData.repository.name
         

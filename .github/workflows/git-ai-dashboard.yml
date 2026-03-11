@@ -27,6 +27,13 @@ jobs:
           } catch {
             Write-Host "Installing Git AI..."
             irm https://usegitai.com/install.ps1 | iex
+            
+            # Refresh PATH for current session
+            $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+            
+            # Verify installation
+            Write-Host "Verifying installation..."
+            & "$env:USERPROFILE\.git-ai\bin\git-ai.exe" --version
           }
           
       - name: Fetch Git AI Notes
