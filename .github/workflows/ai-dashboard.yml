@@ -32,7 +32,20 @@ jobs:
           fi
           echo "Range: $SINCE_SHA..HEAD"
           git-ai stats "$SINCE_SHA..HEAD" --json 2>/dev/null > stats.json || echo "{}" > stats.json
-          cat stats.json
+
+          python3 -c "
+          import subprocess, json
+          from datetime import datetime, timedelta, timezone
+          days = {}
+          for i in range(7):
+              d = (datetime.now(timezone.utc) - timedelta(days=6-i)).strftime('%Y-%m-%d')
+              days[d] = 0
+          result = subprocess.run(['git','log','--since=7 days ago','--format=%cd','--date=format:%Y-%m-%d'], capture_output=True, text=True)
+          for line in result.stdout.strip().split('\n'):
+              if line in days:
+                  days[line] += 1
+          print(json.dumps(days))
+          " > commits_per_day.json
 
       - name: Build dashboard HTML
         run: |
@@ -41,6 +54,8 @@ jobs:
 
           with open('stats.json') as f:
               raw = json.load(f)
+          with open('commits_per_day.json') as f:
+              commits_per_day = json.load(f)
 
           data  = raw.get('range_stats', raw)
           auth  = raw.get('authorship_stats', {})
@@ -53,47 +68,70 @@ jobs:
           wait_s     = data.get('time_waiting_for_ai', 0)
           breakdown  = data.get('tool_model_breakdown', {})
 
-          ai_pct  = round(ai / total * 100, 1) if total > 0 else 0
-          wait_h  = round(wait_s / 3600, 1)
+          ai_pct      = round(ai / total * 100, 1) if total > 0 else 0
+          human_pct   = round(100 - ai_pct, 1)
+          accept_rate = round(accepted / gen * 100, 1) if gen > 0 else 0
 
-          # Top agent
+          if wait_s >= 3600:
+              wait_str = f"{round(wait_s/3600,1)}h"
+          elif wait_s >= 60:
+              wait_str = f"{round(wait_s/60,1)}m"
+          else:
+              wait_str = f"{wait_s}s"
+
+          AGENT_NAMES = {
+              'cursor': 'Cursor',
+              'github-copilot': 'GitHub Copilot',
+              'claude-code': 'Claude Code',
+              'copilot': 'GitHub Copilot',
+              'windsurf': 'Windsurf',
+          }
+
+          def clean_agent(key):
+              raw_tool = key.split('/')[0].split('::')[0].lower()
+              return AGENT_NAMES.get(raw_tool, raw_tool.replace('-',' ').title())
+
+          def clean_model(key):
+              tool_raw = key.split('/')[0].split('::')[0].lower()
+              agent    = AGENT_NAMES.get(tool_raw, tool_raw.replace('-',' ').title())
+              if '/' in key:
+                  model = key.split('/',1)[1]
+                  if model in ('auto','unknown','default'):
+                      return agent
+                  return f"{agent} / {model}"
+              sub = key.split('::')
+              if len(sub) > 1 and sub[1] not in ('unknown','default','auto'):
+                  return f"{agent} / {sub[1]}"
+              return agent
+
           top_agent, top_lines = 'N/A', 0
           for key, m in breakdown.items():
-              tool = key.split('/')[0].split('::')[0].replace('-', ' ').title()
+              name = clean_agent(key)
               if m.get('ai_additions', 0) > top_lines:
                   top_lines = m.get('ai_additions', 0)
-                  top_agent = tool
+                  top_agent = name
 
-          # Models
           model_totals = {}
           for key, m in breakdown.items():
-              model = key.split('/', 1)[1] if '/' in key else key
-              model_totals[model] = model_totals.get(model, 0) + m.get('ai_additions', 0)
+              label = clean_model(key)
+              model_totals[label] = model_totals.get(label, 0) + m.get('ai_additions', 0)
           model_sorted = sorted(model_totals.items(), key=lambda x: x[1], reverse=True)[:5]
-          model_max = model_sorted[0][1] if model_sorted else 1
+          model_max    = model_sorted[0][1] if model_sorted else 1
 
-          # Parallel agents
-          tools = set(key.split('/')[0].split('::')[0] for key in breakdown)
+          tools    = set(clean_agent(k) for k in breakdown)
           parallel = len(tools)
 
-          # Ratio
-          if gen > 0 and ai > 0 and accepted > 0:
-              b = min(gen, ai, accepted)
-              ratio = f"{round(gen/b,1)}:{round(ai/b,1)}:{round(accepted/b,1)}"
-          else:
-              ratio = 'N/A'
+          total_commits   = auth.get('total_commits', 0)
+          commits_with_ai = auth.get('commits_with_authorship', 0)
+          updated_at      = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M UTC')
 
-          total_commits    = auth.get('total_commits', 0)
-          commits_with_ai  = auth.get('commits_with_authorship', 0)
-          updated_at       = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')
-
-          COLORS = ['#4fa3e3', '#a78bfa', '#34d399', '#fb923c', '#f472b6']
+          COLORS = ['#4fa3e3','#a78bfa','#34d399','#fb923c','#f472b6']
 
           model_bars = ''
-          for i, (model, lines) in enumerate(model_sorted):
+          for i, (label, lines) in enumerate(model_sorted):
               pct   = round(lines / model_max * 100)
               color = COLORS[i % len(COLORS)]
-              short = (model[:26] + '…') if len(model) > 26 else model
+              short = (label[:30]+'…') if len(label) > 30 else label
               model_bars += f'''<div class="model-row">
                 <span class="model-name">{short}</span>
                 <div class="model-bar-wrap"><div class="model-bar" style="width:{pct}%;background:{color}"></div></div>
@@ -105,6 +143,19 @@ jobs:
               f'<div class="contrib-tag">{c.split("<")[0].strip()}</div>'
               for c in committers[:8]
           ) or '<span style="color:var(--sub)">No data available</span>'
+
+          day_max = max(commits_per_day.values()) or 1
+          timeline_bars = ''
+          for date, count in commits_per_day.items():
+              pct  = round(count / day_max * 100)
+              dstr = date[5:]
+              timeline_bars += f'''<div class="tl-col">
+                <div class="tl-bar-wrap">
+                  <div class="tl-bar" style="height:{max(pct,4)}%" title="{count} commits"></div>
+                </div>
+                <div class="tl-label">{dstr}</div>
+                <div class="tl-count">{count}</div>
+              </div>'''
 
           HTML = f"""<!DOCTYPE html>
           <html lang="en">
@@ -124,41 +175,48 @@ jobs:
               header{{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:2.5rem;padding-bottom:1.5rem;border-bottom:1px solid var(--border)}}
               h1{{font-size:1.75rem;font-weight:700;letter-spacing:-.02em}}
               header p{{color:var(--sub);font-size:.9rem;margin-top:.4rem}}
-              .ts{{font-family:'IBM Plex Mono',monospace;font-size:.75rem;color:var(--muted);direction:ltr}}
-              .grid3{{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1rem}}
-              .grid-wide{{display:grid;grid-template-columns:1fr 1fr 2fr;gap:1rem;margin-bottom:1rem}}
+              .ts{{font-family:'IBM Plex Mono',monospace;font-size:.75rem;color:var(--muted)}}
+              .grid-top{{display:grid;grid-template-columns:1fr 1fr 2fr;gap:1rem;margin-bottom:1rem}}
+              .grid-mid{{display:grid;grid-template-columns:1fr 1fr 2fr;gap:1rem;margin-bottom:1rem}}
+              .grid-bot{{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}}
               .card{{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.5rem;position:relative;overflow:hidden}}
               .card::before{{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.02),transparent 60%);pointer-events:none}}
               .lbl{{font-size:.68rem;font-family:'IBM Plex Mono',monospace;letter-spacing:.12em;color:var(--sub);text-transform:uppercase;margin-bottom:1.2rem}}
-              /* AI PCT */
               .big{{font-size:4rem;font-weight:700;color:var(--accent);line-height:1;font-family:'IBM Plex Mono',monospace;text-align:center}}
-              .bar-bg{{height:6px;background:var(--muted);border-radius:3px;overflow:hidden;margin-top:1rem}}
-              .bar-fill{{height:100%;background:linear-gradient(90deg,var(--accent),#fb923c);border-radius:3px}}
-              /* agent */
+              .split-bar{{display:flex;height:8px;border-radius:4px;overflow:hidden;margin-top:1rem;gap:2px}}
+              .split-human{{background:var(--blue);border-radius:4px 0 0 4px}}
+              .split-ai{{background:var(--accent);border-radius:0 4px 4px 0}}
+              .split-labels{{display:flex;justify-content:space-between;margin-top:.5rem;font-size:.72rem;color:var(--sub);font-family:'IBM Plex Mono',monospace}}
+              .accept-wrap{{display:flex;align-items:center;gap:1.5rem;margin-top:.5rem}}
+              .accept-pct{{font-size:2.8rem;font-weight:700;font-family:'IBM Plex Mono',monospace;color:var(--green)}}
+              .accept-detail{{font-size:.78rem;color:var(--sub);line-height:1.9}}
+              .accept-detail strong{{color:var(--text)}}
               .agent{{font-size:1.6rem;font-weight:600;display:flex;align-items:center;gap:.6rem;margin-top:.5rem}}
               .dot{{width:10px;height:10px;border-radius:50%;background:var(--blue);flex-shrink:0}}
-              /* models */
               .model-row{{display:flex;align-items:center;gap:.75rem;margin-bottom:.6rem}}
-              .model-name{{font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:var(--sub);width:150px;flex-shrink:0;direction:ltr;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
+              .model-name{{font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:var(--sub);width:170px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
               .model-bar-wrap{{flex:1;height:5px;background:var(--muted);border-radius:3px;overflow:hidden}}
               .model-bar{{height:100%;border-radius:3px}}
               .model-count{{font-family:'IBM Plex Mono',monospace;font-size:.73rem;color:var(--text);width:34px;text-align:right}}
-              /* stat */
               .stat{{font-size:2.2rem;font-weight:700;font-family:'IBM Plex Mono',monospace}}
               .stat-sub{{font-size:.78rem;color:var(--sub);margin-top:.35rem}}
-              /* output */
               .out-grid{{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-top:.5rem}}
               .out-item label{{display:block;font-size:.62rem;font-family:'IBM Plex Mono',monospace;letter-spacing:.1em;color:var(--sub);text-transform:uppercase;margin-bottom:.4rem}}
               .out-val{{font-size:1.5rem;font-weight:700;font-family:'IBM Plex Mono',monospace}}
               .c-blue{{color:var(--blue)}} .c-green{{color:var(--green)}} .c-orange{{color:var(--accent)}} .c-white{{color:var(--text)}}
-              /* contrib */
+              .timeline{{display:flex;align-items:flex-end;gap:.5rem;height:80px;margin-top:.5rem}}
+              .tl-col{{display:flex;flex-direction:column;align-items:center;flex:1;height:100%}}
+              .tl-bar-wrap{{flex:1;width:100%;display:flex;align-items:flex-end}}
+              .tl-bar{{width:100%;background:var(--blue);border-radius:3px 3px 0 0;min-height:4px}}
+              .tl-label{{font-family:'IBM Plex Mono',monospace;font-size:.6rem;color:var(--sub);margin-top:.3rem;white-space:nowrap}}
+              .tl-count{{font-family:'IBM Plex Mono',monospace;font-size:.6rem;color:var(--muted)}}
               .contrib-wrap{{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.5rem}}
               .contrib-tag{{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.3rem .7rem;font-size:.78rem;color:var(--sub)}}
               .divider{{height:1px;background:var(--border);margin:1rem 0}}
               .meta{{display:flex;gap:2rem;font-size:.82rem;color:var(--sub);flex-wrap:wrap}}
               .meta strong{{color:var(--text)}}
-              .footer{{margin-top:2rem;font-size:.73rem;color:var(--muted);font-family:'IBM Plex Mono',monospace;direction:ltr}}
-              @media(max-width:900px){{.grid3,.grid-wide{{grid-template-columns:1fr}}}}
+              .footer{{margin-top:2rem;font-size:.73rem;color:var(--muted);font-family:'IBM Plex Mono',monospace}}
+              @media(max-width:900px){{.grid-top,.grid-mid,.grid-bot{{grid-template-columns:1fr}}}}
             </style>
           </head>
           <body>
@@ -167,19 +225,32 @@ jobs:
                 <h1>AI Authorship Dashboard</h1>
                 <p>Cross-agent statistics and session analysis to improve your AI-aided development.</p>
               </div>
-              <div class="ts">updated : {updated_at}</div>
+              <div class="ts">Updated: {updated_at}</div>
             </header>
 
-            <div class="grid3">
+            <div class="grid-top">
               <div class="card">
-                <div class="lbl">AI CODE (7 ימים)</div>
+                <div class="lbl">AI CODE (last 7 days)</div>
                 <div class="big">{ai_pct}%</div>
-                <div class="bar-bg"><div class="bar-fill" style="width:{ai_pct}%"></div></div>
+                <div class="split-bar">
+                  <div class="split-human" style="flex:{human_pct}"></div>
+                  <div class="split-ai"    style="flex:{ai_pct}"></div>
+                </div>
+                <div class="split-labels">
+                  <span>&#9632; Human {human_pct}%</span>
+                  <span>AI {ai_pct}% &#9632;</span>
+                </div>
               </div>
               <div class="card">
-                <div class="lbl">TOP AGENT (last 7 days)</div>
-                <div class="agent"><span class="dot"></span>{top_agent}</div>
-                <div style="margin-top:1rem;color:var(--sub);font-size:.8rem">{top_lines} AI lines</div>
+                <div class="lbl">ACCEPTANCE RATE (last 7 days)</div>
+                <div class="accept-wrap">
+                  <div class="accept-pct">{accept_rate}%</div>
+                  <div class="accept-detail">
+                    <div>Generated: <strong>{gen}</strong></div>
+                    <div>Committed: <strong>{ai}</strong></div>
+                    <div>Accepted as-is: <strong>{accepted}</strong></div>
+                  </div>
+                </div>
               </div>
               <div class="card">
                 <div class="lbl">TOP MODELS (last 7 days)</div>
@@ -187,41 +258,47 @@ jobs:
               </div>
             </div>
 
-            <div class="grid-wide">
+            <div class="grid-mid">
               <div class="card">
-                <div class="lbl">AI USAGE (last 7 days)</div>
-                <div class="stat">{wait_h}hrs</div>
-                <div class="stat-sub">Time waiting for AI responses</div>
+                <div class="lbl">TOP AGENT (last 7 days)</div>
+                <div class="agent"><span class="dot"></span>{top_agent}</div>
+                <div style="margin-top:1rem;color:var(--sub);font-size:.8rem">{top_lines} AI lines committed</div>
               </div>
               <div class="card">
-                <div class="lbl">PARALLEL AGENTS (last 7 days)</div>
-                <div class="stat">{parallel}</div>
-                <div class="stat-sub">Distinct agents in use</div>
+                <div class="lbl">AI WAIT TIME (last 7 days)</div>
+                <div class="stat">{wait_str}</div>
+                <div class="stat-sub">Time waiting for AI responses</div>
               </div>
               <div class="card">
                 <div class="lbl">AI OUTPUT (last 7 days)</div>
                 <div class="out-grid">
                   <div class="out-item"><label>GENERATED</label><div class="out-val c-blue">{gen}</div></div>
                   <div class="out-item"><label>COMMITTED</label><div class="out-val c-green">{ai}</div></div>
-                  <div class="out-item"><label>MERGED</label><div class="out-val c-orange">{accepted}</div></div>
-                  <div class="out-item"><label>RATIO</label><div class="out-val c-white" style="font-size:1.1rem">{ratio}</div></div>
+                  <div class="out-item"><label>ACCEPTED</label><div class="out-val c-orange">{accepted}</div></div>
+                  <div class="out-item"><label>AGENTS</label><div class="out-val c-white">{parallel}</div></div>
                 </div>
               </div>
             </div>
 
-            <div class="card">
-              <div class="lbl">CONTRIBUTORS WITH AUTHORSHIP DATA</div>
-              <div class="contrib-wrap">{contrib_tags}</div>
-              <div class="divider"></div>
-              <div class="meta">
-                <span>Total commits: <strong>{total_commits}</strong></span>
-                <span>With attribution: <strong style="color:var(--green)">{commits_with_ai}</strong></span>
-                <span>Human lines: <strong>{human}</strong></span>
-                <span>AI lines: <strong style="color:var(--accent)">{ai}</strong></span>
+            <div class="grid-bot">
+              <div class="card">
+                <div class="lbl">COMMITS PER DAY (last 7 days)</div>
+                <div class="timeline">{timeline_bars}</div>
+              </div>
+              <div class="card">
+                <div class="lbl">CONTRIBUTORS WITH AUTHORSHIP DATA</div>
+                <div class="contrib-wrap">{contrib_tags}</div>
+                <div class="divider"></div>
+                <div class="meta">
+                  <span>Total commits: <strong>{total_commits}</strong></span>
+                  <span>With attribution: <strong style="color:var(--green)">{commits_with_ai}</strong></span>
+                  <span>Human lines: <strong>{human}</strong></span>
+                  <span>AI lines: <strong style="color:var(--accent)">{ai}</strong></span>
+                </div>
               </div>
             </div>
 
-          <div class="footer">powered by git-ai · nice-cxone · data stored exclusively in git notes</div>
+            <div class="footer">powered by git-ai · nice-cxone · data stored exclusively in git notes</div>
           </body>
           </html>"""
 
@@ -236,5 +313,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: .
           publish_branch: gh-pages
-          include_files: dashboard.html
           commit_message: "dashboard: update AI stats [skip ci]"
