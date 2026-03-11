@@ -1,0 +1,77 @@
+name: Collect AI Code Metrics
+
+on:
+  push:
+    branches: [master, main]
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch AI Stats Notes
+        run: |
+          git fetch origin refs/notes/ai_stats:refs/notes/ai_stats 2>/dev/null || echo "No AI stats notes found yet"
+
+      - name: Extract AI Metrics
+        run: |
+          echo "=== AI Code Metrics Report ==="
+          echo ""
+
+          git log --merges -1 --pretty=format:"%H" | head -1 | while read merge_sha; do
+            COMMITS=$(git log "$merge_sha^1..$merge_sha^2" --pretty=format:"%H" 2>/dev/null)
+            if [ -z "$COMMITS" ]; then
+              COMMITS=$(git log -10 --pretty=format:"%H")
+            fi
+
+            TOTAL_AI=0
+            TOTAL_HUMAN=0
+            COMMIT_COUNT=0
+
+            for sha in $COMMITS; do
+              NOTE=$(git notes --ref=ai_stats show "$sha" 2>/dev/null)
+              if [ -n "$NOTE" ]; then
+                COMMIT_COUNT=$((COMMIT_COUNT + 1))
+                AI=$(echo "$NOTE" | jq -r '.ai_lines // 0')
+                HUMAN=$(echo "$NOTE" | jq -r '.human_lines // 0')
+                PCT=$(echo "$NOTE" | jq -r '.ai_percentage // 0')
+                TOTAL_AI=$((TOTAL_AI + AI))
+                TOTAL_HUMAN=$((TOTAL_HUMAN + HUMAN))
+                echo "Commit ${sha:0:7}: AI=$AI Human=$HUMAN ($PCT%)"
+              fi
+            done
+
+            echo ""
+            echo "Summary: $COMMIT_COUNT tracked commits | AI lines: $TOTAL_AI | Human lines: $TOTAL_HUMAN"
+
+            if [ "$TOTAL_AI" -gt 0 ] || [ "$TOTAL_HUMAN" -gt 0 ]; then
+              OVERALL_PCT=$(awk "BEGIN {printf \"%.1f\", ($TOTAL_AI/($TOTAL_AI+$TOTAL_HUMAN))*100}")
+              echo "Overall AI percentage: $OVERALL_PCT%"
+            fi
+          done
+
+      - name: Export Metrics JSON
+        run: |
+          REPORT="[]"
+
+          for sha in $(git log -20 --pretty=format:"%H"); do
+            NOTE=$(git notes --ref=ai_stats show "$sha" 2>/dev/null)
+            if [ -n "$NOTE" ]; then
+              ENTRY=$(echo "$NOTE" | jq --arg sha "$sha" '. + {commit: $sha}')
+              REPORT=$(echo "$REPORT" | jq --argjson entry "$ENTRY" '. + [$entry]')
+            fi
+          done
+
+          echo "$REPORT" > ai_metrics_report.json
+          echo "Exported $(echo "$REPORT" | jq length) entries to ai_metrics_report.json"
+          cat ai_metrics_report.json
+
+      - name: Upload Metrics Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-metrics-report
+          path: ai_metrics_report.json
+          retention-days: 90
