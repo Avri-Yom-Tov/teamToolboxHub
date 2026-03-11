@@ -1,0 +1,1 @@
+{"total_added":21,"ai_lines":0,"trivial_lines":2,"ai_percentage":0.0,"author":"Avri !","proposals_count":0,"timestamp":"2026-03-11T15:48:30.4981333+02:00","files_changed":[".github/hooks/capture_ai.json","scripts/log_ai_output.ps1","test_file.js"],"ai_modified_lines":0,"human_lines":19}
