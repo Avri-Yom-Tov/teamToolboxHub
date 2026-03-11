@@ -3,8 +3,9 @@
         "Stop": [
             {
                 "type": "command",
-                "command": "./scripts/log_ai_output.sh",
-                "windows": "powershell -File scripts\\log_ai_output.ps1"
+                "command": "bash ./scripts/log_ai_output.sh",
+                "windows": "powershell -ExecutionPolicy Bypass -File .\\scripts\\log_ai_output.ps1",
+                "timeout": 30
             }
         ]
     }

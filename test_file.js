@@ -1,11 +1,11 @@
 export const greet = (name) => {
-  console.log(`Greeting user: ${name}`);
-  return `Hello, ${name}!`;
+  const message = `Hello, ${name}!`;
+  return message;
 };
 
 export const farewell = (name) => {
-  console.log(`Bidding farewell to user: ${name}`);
-  return `Goodbye, ${name}!`;
+  const message = `Goodbye, ${name}!`;
+  return message;
 };
 
 export default greet;

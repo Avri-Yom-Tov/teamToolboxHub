@@ -1,13 +1,30 @@
 $ErrorActionPreference = "SilentlyContinue"
 
+$gitDir = git rev-parse --git-dir 2>$null
+if (-not $gitDir) { exit 0 }
+
+$bufferDir = Join-Path $gitDir "ai_buffer"
+if (-not (Test-Path $bufferDir)) {
+    New-Item -ItemType Directory -Path $bufferDir -Force | Out-Null
+}
+
+$debugLog = Join-Path $bufferDir "debug.log"
+
 $input_json = [Console]::In.ReadToEnd()
+Add-Content -Path $debugLog -Value "$(Get-Date -Format 'o') INPUT: $input_json"
+
 if (-not $input_json) { exit 0 }
 
 $payload = $input_json | ConvertFrom-Json -Depth 10
 if (-not $payload) { exit 0 }
 
 $transcriptPath = $payload.transcript_path
-if (-not $transcriptPath -or -not (Test-Path $transcriptPath)) { exit 0 }
+Add-Content -Path $debugLog -Value "$(Get-Date -Format 'o') transcript_path: $transcriptPath"
+
+if (-not $transcriptPath -or -not (Test-Path $transcriptPath)) {
+    Add-Content -Path $debugLog -Value "$(Get-Date -Format 'o') transcript file not found, exiting"
+    exit 0
+}
 
 $transcript = Get-Content -Path $transcriptPath -Raw -Encoding UTF8 | ConvertFrom-Json -Depth 20
 if (-not $transcript) { exit 0 }
@@ -20,9 +37,7 @@ foreach ($turn in $transcript) {
 }
 if ($assistantMessages.Count -eq 0) { exit 0 }
 $aiCode = $assistantMessages[-1]
-
-$gitDir = git rev-parse --git-dir 2>$null
-if (-not $gitDir) { exit 0 }
+Add-Content -Path $debugLog -Value "$(Get-Date -Format 'o') extracted assistant message, length: $($aiCode.Length)"
 
 $bufferDir = Join-Path $gitDir "ai_buffer"
 if (-not (Test-Path $bufferDir)) {
