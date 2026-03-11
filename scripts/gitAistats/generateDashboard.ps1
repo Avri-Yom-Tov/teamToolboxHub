@@ -54,37 +54,41 @@ function Get-GitAiStats {
 
 # Function to extract commit history with AI notes
 function Get-CommitHistory {
-    param([int]$Limit = 50)
+    param([int]$Limit = 20)
     
-    Write-Host "Extracting commit history with AI notes..." -ForegroundColor Yellow
+    Write-Host "Extracting commit history with AI notes (limit: $Limit)..." -ForegroundColor Yellow
     
     $commits = @()
     $gitLog = git log --format="%H|%an|%ae|%ad|%s" --date=iso -n $Limit 2>&1
     
+    $counter = 0
     foreach ($line in $gitLog) {
         if ($line -match '^([a-f0-9]+)\|(.+?)\|(.+?)\|(.+?)\|(.+)$') {
+            $counter++
+            Write-Progress -Activity "Analyzing commits" -Status "Processing commit $counter of $Limit" -PercentComplete (($counter / $Limit) * 100)
+            
             $sha = $Matches[1]
             $author = $Matches[2]
             $email = $Matches[3]
             $date = $Matches[4]
             $message = $Matches[5]
             
-            # Try to get AI notes for this commit
-            $aiNote = git notes --ref=ai show $sha 2>&1
-            $hasAiContent = $LASTEXITCODE -eq 0 -and $aiNote -ne $null
+            # Check if AI notes exist (faster - just check, don't read content)
+            git notes --ref=ai show $sha 2>&1 | Out-Null
+            $hasAiContent = $LASTEXITCODE -eq 0
             
-            $commits += @{
-                sha = $sha
+            # Store as flat PSCustomObject for better JSON serialization
+            $commits += [PSCustomObject]@{
+                sha = $sha.Substring(0, [Math]::Min(40, $sha.Length))
                 author = $author
-                email = $email
                 date = $date
-                message = $message
+                message = $message.Substring(0, [Math]::Min(100, $message.Length))
                 hasAiNote = $hasAiContent
-                aiNotePreview = if ($hasAiContent) { ($aiNote | Select-Object -First 3) -join "`n" } else { $null }
             }
         }
     }
     
+    Write-Progress -Activity "Analyzing commits" -Completed
     return $commits
 }
 
@@ -152,16 +156,22 @@ function New-AgentExperienceRecord {
 # Main execution
 try {
     # Collect data
+    Write-Host "`nStep 1/4: Collecting Git AI statistics..." -ForegroundColor Cyan
     $gitAiStats = Get-GitAiStats
+    
+    Write-Host "Step 2/4: Calculating repository stats..." -ForegroundColor Cyan
     $repoStats = Get-RepoStats
-    $commitHistory = Get-CommitHistory -Limit 50
+    
+    Write-Host "Step 3/4: Analyzing commit history..." -ForegroundColor Cyan
+    $commitHistory = Get-CommitHistory -Limit 20
     
     # Generate AgentExperienceRecord
+    Write-Host "Step 4/4: Generating dashboard data..." -ForegroundColor Cyan
     $dashboardData = New-AgentExperienceRecord -GitAiStats $gitAiStats -RepoStats $repoStats -CommitHistory $commitHistory
     
-    # Save JSON data
+    # Save JSON data with sufficient depth
     $jsonPath = Join-Path $outputDir "dashboard-data.json"
-    $dashboardData | ConvertTo-Json -Depth 20 | Out-File -FilePath $jsonPath -Encoding UTF8
+    $dashboardData | ConvertTo-Json -Depth 100 | Out-File -FilePath $jsonPath -Encoding UTF8
     Write-Host "Dashboard data saved to: $jsonPath" -ForegroundColor Green
     
     # Generate HTML dashboard
@@ -173,7 +183,7 @@ try {
         $template = Get-Content $templatePath -Raw
         
         # Replace placeholders
-        $html = $template -replace '{{DASHBOARD_DATA}}', ($dashboardData | ConvertTo-Json -Depth 20 -Compress)
+        $html = $template -replace '{{DASHBOARD_DATA}}', ($dashboardData | ConvertTo-Json -Depth 100 -Compress)
         $html = $html -replace '{{GENERATED_AT}}', $dashboardData.generated_at
         $html = $html -replace '{{REPO_NAME}}', $dashboardData.repository.name
         
