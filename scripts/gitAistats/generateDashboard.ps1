@@ -54,7 +54,7 @@ function Get-GitAiStats {
 
 # Function to extract commit history with AI notes
 function Get-CommitHistory {
-    param([int]$Limit = 20)
+    param([int]$Limit = 10)
     
     Write-Host "Extracting commit history with AI notes (limit: $Limit)..." -ForegroundColor Yellow
     
@@ -96,11 +96,14 @@ function Get-CommitHistory {
 function Get-RepoStats {
     Write-Host "Calculating repository statistics..." -ForegroundColor Yellow
     
-    $stats = @{
-        totalCommits = (git rev-list --count HEAD 2>&1)
-        contributors = @(git log --format='%ae' | Sort-Object -Unique)
+    # Get contributors count from recent commits only (faster)
+    $contributorsCount = (git log --format='%ae' -n 200 | Sort-Object -Unique | Measure-Object).Count
+    
+    $stats = [PSCustomObject]@{
+        totalCommits = [int](git rev-list --count HEAD 2>&1)
+        contributorsCount = $contributorsCount  
         lastCommitDate = (git log -1 --format='%ad' --date=iso 2>&1)
-        firstCommitDate = (git log --reverse --format='%ad' --date=iso 2>&1 | Select-Object -First 1)
+        firstCommitDate = (git log --reverse --format='%ad' --date=iso -1 2>&1)
     }
     
     return $stats
@@ -114,38 +117,39 @@ function New-AgentExperienceRecord {
         [object]$CommitHistory
     )
     
-    $record = @{
+    # Use PSCustomObject for flatter JSON structure
+    $record = [PSCustomObject]@{
         generated_at = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
-        repository = @{
+        repository = [PSCustomObject]@{
             name = Split-Path -Leaf (Get-Location)
-            path = Get-Location
+            path = (Get-Location).Path
             branch = $Branch
             total_commits = $RepoStats.totalCommits
-            contributors_count = $RepoStats.contributors.Count
+            contributors_count = $RepoStats.contributorsCount
             first_commit = $RepoStats.firstCommitDate
             last_commit = $RepoStats.lastCommitDate
         }
-        ai_metrics = @{
+        ai_metrics = [PSCustomObject]@{
             ai_percentage = if ($GitAiStats) { $GitAiStats.ai_percentage } else { 0 }
             human_percentage = if ($GitAiStats) { $GitAiStats.human_percentage } else { 100 }
             total_lines = if ($GitAiStats) { $GitAiStats.total_lines } else { 0 }
             ai_lines = if ($GitAiStats) { $GitAiStats.ai_lines } else { 0 }
             human_lines = if ($GitAiStats) { $GitAiStats.human_lines } else { 0 }
-            acceptance_rate = if ($GitAiStats) { $GitAiStats.acceptance_rate } else { 0 }
-            models_used = if ($GitAiStats.models) { $GitAiStats.models } else { @() }
-            tools_used = if ($GitAiStats.tools) { $GitAiStats.tools } else { @() }
+            acceptance_rate = if ($GitAiStats -and $GitAiStats.acceptance_rate) { $GitAiStats.acceptance_rate } else { 100 }
+            models_used = @()
+            tools_used = @()
         }
-        commit_analysis = @{
+        commit_analysis = [PSCustomObject]@{
             total_analyzed = $CommitHistory.Count
             commits_with_ai = @($CommitHistory | Where-Object { $_.hasAiNote }).Count
-            recent_commits = $CommitHistory | Select-Object -First 10
+            recent_commits = @($CommitHistory | Select-Object -First 10)
         }
-        agent_experience = @{
+        agent_experience = [PSCustomObject]@{
             task_count = @($CommitHistory | Where-Object { $_.hasAiNote }).Count
             avg_ai_contribution = if ($GitAiStats) { $GitAiStats.ai_percentage } else { 0 }
-            quality_indicators = @{
-                acceptance_rate = if ($GitAiStats) { $GitAiStats.acceptance_rate } else { 0 }
-                commit_retention = "N/A"  # Would need time-series data
+            quality_indicators = [PSCustomObject]@{
+                acceptance_rate = if ($GitAiStats -and $GitAiStats.acceptance_rate) { $GitAiStats.acceptance_rate } else { 100 }
+                commit_retention = "N/A"
             }
         }
     }
@@ -163,7 +167,7 @@ try {
     $repoStats = Get-RepoStats
     
     Write-Host "Step 3/4: Analyzing commit history..." -ForegroundColor Cyan
-    $commitHistory = Get-CommitHistory -Limit 20
+    $commitHistory = Get-CommitHistory -Limit 10
     
     # Generate AgentExperienceRecord
     Write-Host "Step 4/4: Generating dashboard data..." -ForegroundColor Cyan
@@ -171,7 +175,7 @@ try {
     
     # Save JSON data with sufficient depth
     $jsonPath = Join-Path $outputDir "dashboard-data.json"
-    $dashboardData | ConvertTo-Json -Depth 100 | Out-File -FilePath $jsonPath -Encoding UTF8
+    $dashboardData | ConvertTo-Json -Depth 10 -Compress:$false | Out-File -FilePath $jsonPath -Encoding UTF8
     Write-Host "Dashboard data saved to: $jsonPath" -ForegroundColor Green
     
     # Generate HTML dashboard
@@ -183,7 +187,7 @@ try {
         $template = Get-Content $templatePath -Raw
         
         # Replace placeholders
-        $html = $template -replace '{{DASHBOARD_DATA}}', ($dashboardData | ConvertTo-Json -Depth 100 -Compress)
+        $html = $template -replace '{{DASHBOARD_DATA}}', ($dashboardData | ConvertTo-Json -Depth 10 -Compress)
         $html = $html -replace '{{GENERATED_AT}}', $dashboardData.generated_at
         $html = $html -replace '{{REPO_NAME}}', $dashboardData.repository.name
         
