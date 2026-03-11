@@ -1,0 +1,38 @@
+scripts/gitAistats/generateDashboard.ps1
+  ecc3a32954c91108 57,99-104,106,120-121,123,125,128,132,138-139,142,145,147,150-152,170,178,190
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.10",
+  "base_commit_sha": "c958aaed8d837f3ad89bcb5af34a13abf0be69a4",
+  "prompts": {
+    "5f5acd3646f9d410": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "08bee92c-6530-45f8-bca4-a950100a9582",
+        "model": "copilot/claude-sonnet-4.5"
+      },
+      "human_author": "Avri ! <avraham.yom-tov@nice.com>",
+      "messages": [],
+      "total_additions": 38,
+      "total_deletions": 34,
+      "accepted_lines": 0,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/89aea53aff14aa353bf4635a56d77f5be4a09dc8142871b8198542defe4fadc8"
+    },
+    "ecc3a32954c91108": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "54ee3db2-aaba-4178-99ec-9e862a992637",
+        "model": "copilot/claude-sonnet-4.5"
+      },
+      "human_author": "Avri ! <avraham.yom-tov@nice.com>",
+      "messages": [],
+      "total_additions": 38,
+      "total_deletions": 34,
+      "accepted_lines": 33,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/fa9502c59d963853da7a2d4993fec88993c50dabe8011d89da5924a23e3131a0"
+    }
+  }
+}
