@@ -40,9 +40,20 @@ $scriptPath = Join-Path $PSScriptRoot "generateDashboard.ps1"
 & $scriptPath
 
 # Check if dashboard was created
-$dashboardPath = Join-Path (Split-Path $PSScriptRoot -Parent) "gitAistats\dashboard.html"
-if (Test-Path $dashboardPath) {
-    Write-Host "`n✓ Dashboard generated successfully!" -ForegroundColor Green
+$dashboardPath = Join-Path $PSScriptRoot "gitAistats\dashboard.html"
+$dataPath = Join-Path $PSScriptRoot "gitAistats\dashboard-data.json"
+
+if ((Test-Path $dashboardPath) -and (Test-Path $dataPath)) {
+    # Check if data has null metrics
+    $data = Get-Content $dataPath -Raw | ConvertFrom-Json
+    if ($null -eq $data.ai_metrics.ai_percentage) {
+        Write-Host "`n⚠ Dashboard generated with incomplete data" -ForegroundColor Yellow
+        Write-Host "Git AI statistics are not available. The dashboard will show limited information." -ForegroundColor Yellow
+        Write-Host "Make sure you're in a Git repository with Git AI notes." -ForegroundColor Gray
+    }
+    else {
+        Write-Host "`n✓ Dashboard generated successfully!" -ForegroundColor Green
+    }
     Write-Host "Location: $dashboardPath" -ForegroundColor Cyan
     
     # Ask to open

@@ -31,23 +31,35 @@ function Get-GitAiStats {
         }
         
         if (-not $gitAiPath) {
-            Write-Host "Warning: git-ai not found. Install with: irm https://usegitai.com/install.ps1 | iex" -ForegroundColor Yellow
+            Write-Host "⚠ Warning: git-ai not found. Dashboard will show limited metrics." -ForegroundColor Yellow
+            Write-Host "  Install Git AI: irm https://usegitai.com/install.ps1 | iex" -ForegroundColor Gray
             return $null
         }
         
-        $statsJson = & $gitAiPath stats --json 2>&1
+        # Try JSON format first
+        $statsJson = & $gitAiPath stats --json 2>&1 | Out-String
         
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "Warning: git-ai stats returned non-zero exit code" -ForegroundColor Yellow
-            return $null
+        if ($LASTEXITCODE -eq 0 -and $statsJson.Trim() -ne "") {
+            try {
+                $stats = $statsJson | ConvertFrom-Json
+                
+                # Validate that we got actual data
+                if ($stats -and ($stats.ai_percentage -ne $null -or $stats.total_lines -ne $null)) {
+                    Write-Host "✓ Git AI statistics retrieved successfully" -ForegroundColor Green
+                    return $stats
+                }
+            }
+            catch {
+                Write-Host "⚠ Warning: Could not parse Git AI JSON output" -ForegroundColor Yellow
+            }
         }
         
-        # Parse JSON
-        $stats = $statsJson | ConvertFrom-Json
-        return $stats
+        # JSON failed or returned no data - try text parsing as fallback
+        Write-Host "⚠ No Git AI statistics available (repository may have no AI-assisted commits)" -ForegroundColor Yellow
+        return $null
     }
     catch {
-        Write-Host "Error getting Git AI stats: $_" -ForegroundColor Red
+        Write-Host "⚠ Error getting Git AI stats: $_" -ForegroundColor Yellow
         return $null
     }
 }
@@ -130,11 +142,11 @@ function New-AgentExperienceRecord {
             last_commit = $RepoStats.lastCommitDate
         }
         ai_metrics = [PSCustomObject]@{
-            ai_percentage = if ($GitAiStats) { $GitAiStats.ai_percentage } else { 0 }
-            human_percentage = if ($GitAiStats) { $GitAiStats.human_percentage } else { 100 }
-            total_lines = if ($GitAiStats) { $GitAiStats.total_lines } else { 0 }
-            ai_lines = if ($GitAiStats) { $GitAiStats.ai_lines } else { 0 }
-            human_lines = if ($GitAiStats) { $GitAiStats.human_lines } else { 0 }
+            ai_percentage = if ($GitAiStats -and $null -ne $GitAiStats.ai_percentage) { $GitAiStats.ai_percentage } else { $null }
+            human_percentage = if ($GitAiStats -and $null -ne $GitAiStats.human_percentage) { $GitAiStats.human_percentage } else { $null }
+            total_lines = if ($GitAiStats -and $null -ne $GitAiStats.total_lines) { $GitAiStats.total_lines } else { $null }
+            ai_lines = if ($GitAiStats -and $null -ne $GitAiStats.ai_lines) { $GitAiStats.ai_lines } else { $null }
+            human_lines = if ($GitAiStats -and $null -ne $GitAiStats.human_lines) { $GitAiStats.human_lines } else { $null }
             acceptance_rate = if ($GitAiStats -and $GitAiStats.acceptance_rate) { $GitAiStats.acceptance_rate } else { 100 }
             models_used = @()
             tools_used = @()
