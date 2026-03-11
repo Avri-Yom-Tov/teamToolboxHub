@@ -16,41 +16,48 @@
     header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:2.5rem;padding-bottom:1.5rem;border-bottom:1px solid var(--border)}
     h1{font-size:1.75rem;font-weight:700;letter-spacing:-.02em}
     header p{color:var(--sub);font-size:.9rem;margin-top:.4rem}
-    .ts{font-family:'IBM Plex Mono',monospace;font-size:.75rem;color:var(--muted);direction:ltr}
-    .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1rem}
-    .grid-wide{display:grid;grid-template-columns:1fr 1fr 2fr;gap:1rem;margin-bottom:1rem}
+    .ts{font-family:'IBM Plex Mono',monospace;font-size:.75rem;color:var(--muted)}
+    .grid-top{display:grid;grid-template-columns:1fr 1fr 2fr;gap:1rem;margin-bottom:1rem}
+    .grid-mid{display:grid;grid-template-columns:1fr 1fr 2fr;gap:1rem;margin-bottom:1rem}
+    .grid-bot{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
     .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.5rem;position:relative;overflow:hidden}
     .card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.02),transparent 60%);pointer-events:none}
     .lbl{font-size:.68rem;font-family:'IBM Plex Mono',monospace;letter-spacing:.12em;color:var(--sub);text-transform:uppercase;margin-bottom:1.2rem}
-    /* AI PCT */
     .big{font-size:4rem;font-weight:700;color:var(--accent);line-height:1;font-family:'IBM Plex Mono',monospace;text-align:center}
-    .bar-bg{height:6px;background:var(--muted);border-radius:3px;overflow:hidden;margin-top:1rem}
-    .bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),#fb923c);border-radius:3px}
-    /* agent */
+    .split-bar{display:flex;height:8px;border-radius:4px;overflow:hidden;margin-top:1rem;gap:2px}
+    .split-human{background:var(--blue);border-radius:4px 0 0 4px}
+    .split-ai{background:var(--accent);border-radius:0 4px 4px 0}
+    .split-labels{display:flex;justify-content:space-between;margin-top:.5rem;font-size:.72rem;color:var(--sub);font-family:'IBM Plex Mono',monospace}
+    .accept-wrap{display:flex;align-items:center;gap:1.5rem;margin-top:.5rem}
+    .accept-pct{font-size:2.8rem;font-weight:700;font-family:'IBM Plex Mono',monospace;color:var(--green)}
+    .accept-detail{font-size:.78rem;color:var(--sub);line-height:1.9}
+    .accept-detail strong{color:var(--text)}
     .agent{font-size:1.6rem;font-weight:600;display:flex;align-items:center;gap:.6rem;margin-top:.5rem}
     .dot{width:10px;height:10px;border-radius:50%;background:var(--blue);flex-shrink:0}
-    /* models */
     .model-row{display:flex;align-items:center;gap:.75rem;margin-bottom:.6rem}
-    .model-name{font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:var(--sub);width:150px;flex-shrink:0;direction:ltr;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .model-name{font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:var(--sub);width:170px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .model-bar-wrap{flex:1;height:5px;background:var(--muted);border-radius:3px;overflow:hidden}
     .model-bar{height:100%;border-radius:3px}
     .model-count{font-family:'IBM Plex Mono',monospace;font-size:.73rem;color:var(--text);width:34px;text-align:right}
-    /* stat */
     .stat{font-size:2.2rem;font-weight:700;font-family:'IBM Plex Mono',monospace}
     .stat-sub{font-size:.78rem;color:var(--sub);margin-top:.35rem}
-    /* output */
     .out-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-top:.5rem}
     .out-item label{display:block;font-size:.62rem;font-family:'IBM Plex Mono',monospace;letter-spacing:.1em;color:var(--sub);text-transform:uppercase;margin-bottom:.4rem}
     .out-val{font-size:1.5rem;font-weight:700;font-family:'IBM Plex Mono',monospace}
     .c-blue{color:var(--blue)} .c-green{color:var(--green)} .c-orange{color:var(--accent)} .c-white{color:var(--text)}
-    /* contrib */
+    .timeline{display:flex;align-items:flex-end;gap:.5rem;height:80px;margin-top:.5rem}
+    .tl-col{display:flex;flex-direction:column;align-items:center;flex:1;height:100%}
+    .tl-bar-wrap{flex:1;width:100%;display:flex;align-items:flex-end}
+    .tl-bar{width:100%;background:var(--blue);border-radius:3px 3px 0 0;min-height:4px}
+    .tl-label{font-family:'IBM Plex Mono',monospace;font-size:.6rem;color:var(--sub);margin-top:.3rem;white-space:nowrap}
+    .tl-count{font-family:'IBM Plex Mono',monospace;font-size:.6rem;color:var(--muted)}
     .contrib-wrap{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.5rem}
     .contrib-tag{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.3rem .7rem;font-size:.78rem;color:var(--sub)}
     .divider{height:1px;background:var(--border);margin:1rem 0}
     .meta{display:flex;gap:2rem;font-size:.82rem;color:var(--sub);flex-wrap:wrap}
     .meta strong{color:var(--text)}
-    .footer{margin-top:2rem;font-size:.73rem;color:var(--muted);font-family:'IBM Plex Mono',monospace;direction:ltr}
-    @media(max-width:900px){.grid3,.grid-wide{grid-template-columns:1fr}}
+    .footer{margin-top:2rem;font-size:.73rem;color:var(--muted);font-family:'IBM Plex Mono',monospace}
+    @media(max-width:900px){.grid-top,.grid-mid,.grid-bot{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
@@ -59,72 +66,129 @@
       <h1>AI Authorship Dashboard</h1>
       <p>Cross-agent statistics and session analysis to improve your AI-aided development.</p>
     </div>
-    <div class="ts">updated : 2026-03-11 21:49 UTC</div>
+    <div class="ts">Updated: 2026-03-11 22:00 UTC</div>
   </header>
 
-  <div class="grid3">
+  <div class="grid-top">
     <div class="card">
-      <div class="lbl">AI CODE (7 ימים)</div>
-      <div class="big">22.4%</div>
-      <div class="bar-bg"><div class="bar-fill" style="width:22.4%"></div></div>
+      <div class="lbl">AI CODE (last 7 days)</div>
+      <div class="big">18.9%</div>
+      <div class="split-bar">
+        <div class="split-human" style="flex:81.1"></div>
+        <div class="split-ai"    style="flex:18.9"></div>
+      </div>
+      <div class="split-labels">
+        <span>&#9632; Human 81.1%</span>
+        <span>AI 18.9% &#9632;</span>
+      </div>
     </div>
     <div class="card">
-      <div class="lbl">TOP AGENT (last 7 days)</div>
-      <div class="agent"><span class="dot"></span>Cursor</div>
-      <div style="margin-top:1rem;color:var(--sub);font-size:.8rem">73 AI lines</div>
+      <div class="lbl">ACCEPTANCE RATE (last 7 days)</div>
+      <div class="accept-wrap">
+        <div class="accept-pct">11.4%</div>
+        <div class="accept-detail">
+          <div>Generated: <strong>816</strong></div>
+          <div>Committed: <strong>93</strong></div>
+          <div>Accepted as-is: <strong>93</strong></div>
+        </div>
+      </div>
     </div>
     <div class="card">
       <div class="lbl">TOP MODELS (last 7 days)</div>
       <div class="model-row">
-      <span class="model-name">cursor::default</span>
+      <span class="model-name">Cursor</span>
       <div class="model-bar-wrap"><div class="model-bar" style="width:100%;background:#4fa3e3"></div></div>
       <span class="model-count">73</span>
     </div><div class="model-row">
-      <span class="model-name">github-copilot::unknown</span>
-      <div class="model-bar-wrap"><div class="model-bar" style="width:23%;background:#a78bfa"></div></div>
-      <span class="model-count">17</span>
-    </div><div class="model-row">
-      <span class="model-name">auto</span>
-      <div class="model-bar-wrap"><div class="model-bar" style="width:4%;background:#34d399"></div></div>
-      <span class="model-count">3</span>
+      <span class="model-name">GitHub Copilot</span>
+      <div class="model-bar-wrap"><div class="model-bar" style="width:27%;background:#a78bfa"></div></div>
+      <span class="model-count">20</span>
     </div>
     </div>
   </div>
 
-  <div class="grid-wide">
+  <div class="grid-mid">
     <div class="card">
-      <div class="lbl">AI USAGE (last 7 days)</div>
-      <div class="stat">0.0hrs</div>
-      <div class="stat-sub">Time waiting for AI responses</div>
+      <div class="lbl">TOP AGENT (last 7 days)</div>
+      <div class="agent"><span class="dot"></span>Cursor</div>
+      <div style="margin-top:1rem;color:var(--sub);font-size:.8rem">73 AI lines committed</div>
     </div>
     <div class="card">
-      <div class="lbl">PARALLEL AGENTS (last 7 days)</div>
-      <div class="stat">2</div>
-      <div class="stat-sub">Distinct agents in use</div>
+      <div class="lbl">AI WAIT TIME (last 7 days)</div>
+      <div class="stat">14s</div>
+      <div class="stat-sub">Time waiting for AI responses</div>
     </div>
     <div class="card">
       <div class="lbl">AI OUTPUT (last 7 days)</div>
       <div class="out-grid">
         <div class="out-item"><label>GENERATED</label><div class="out-val c-blue">816</div></div>
         <div class="out-item"><label>COMMITTED</label><div class="out-val c-green">93</div></div>
-        <div class="out-item"><label>MERGED</label><div class="out-val c-orange">93</div></div>
-        <div class="out-item"><label>RATIO</label><div class="out-val c-white" style="font-size:1.1rem">8.8:1.0:1.0</div></div>
+        <div class="out-item"><label>ACCEPTED</label><div class="out-val c-orange">93</div></div>
+        <div class="out-item"><label>AGENTS</label><div class="out-val c-white">2</div></div>
       </div>
     </div>
   </div>
 
-  <div class="card">
-    <div class="lbl">CONTRIBUTORS WITH AUTHORSHIP DATA</div>
-    <div class="contrib-wrap"><div class="contrib-tag">Avri !</div><div class="contrib-tag">avriFromHome</div></div>
-    <div class="divider"></div>
-    <div class="meta">
-      <span>Total commits: <strong>11</strong></span>
-      <span>With attribution: <strong style="color:var(--green)">11</strong></span>
-      <span>Human lines: <strong>323</strong></span>
-      <span>AI lines: <strong style="color:var(--accent)">93</strong></span>
+  <div class="grid-bot">
+    <div class="card">
+      <div class="lbl">COMMITS PER DAY (last 7 days)</div>
+      <div class="timeline"><div class="tl-col">
+      <div class="tl-bar-wrap">
+        <div class="tl-bar" style="height:4%" title="0 commits"></div>
+      </div>
+      <div class="tl-label">03-05</div>
+      <div class="tl-count">0</div>
+    </div><div class="tl-col">
+      <div class="tl-bar-wrap">
+        <div class="tl-bar" style="height:4%" title="0 commits"></div>
+      </div>
+      <div class="tl-label">03-06</div>
+      <div class="tl-count">0</div>
+    </div><div class="tl-col">
+      <div class="tl-bar-wrap">
+        <div class="tl-bar" style="height:4%" title="0 commits"></div>
+      </div>
+      <div class="tl-label">03-07</div>
+      <div class="tl-count">0</div>
+    </div><div class="tl-col">
+      <div class="tl-bar-wrap">
+        <div class="tl-bar" style="height:4%" title="0 commits"></div>
+      </div>
+      <div class="tl-label">03-08</div>
+      <div class="tl-count">0</div>
+    </div><div class="tl-col">
+      <div class="tl-bar-wrap">
+        <div class="tl-bar" style="height:4%" title="0 commits"></div>
+      </div>
+      <div class="tl-label">03-09</div>
+      <div class="tl-count">0</div>
+    </div><div class="tl-col">
+      <div class="tl-bar-wrap">
+        <div class="tl-bar" style="height:8%" title="1 commits"></div>
+      </div>
+      <div class="tl-label">03-10</div>
+      <div class="tl-count">1</div>
+    </div><div class="tl-col">
+      <div class="tl-bar-wrap">
+        <div class="tl-bar" style="height:100%" title="12 commits"></div>
+      </div>
+      <div class="tl-label">03-11</div>
+      <div class="tl-count">12</div>
+    </div></div>
+    </div>
+    <div class="card">
+      <div class="lbl">CONTRIBUTORS WITH AUTHORSHIP DATA</div>
+      <div class="contrib-wrap"><div class="contrib-tag">Avri !</div><div class="contrib-tag">avriFromHome</div></div>
+      <div class="divider"></div>
+      <div class="meta">
+        <span>Total commits: <strong>12</strong></span>
+        <span>With attribution: <strong style="color:var(--green)">12</strong></span>
+        <span>Human lines: <strong>399</strong></span>
+        <span>AI lines: <strong style="color:var(--accent)">93</strong></span>
+      </div>
     </div>
   </div>
 
-<div class="footer">powered by git-ai · nice-cxone · data stored exclusively in git notes</div>
+  <div class="footer">powered by git-ai · nice-cxone · data stored exclusively in git notes</div>
 </body>
 </html>
