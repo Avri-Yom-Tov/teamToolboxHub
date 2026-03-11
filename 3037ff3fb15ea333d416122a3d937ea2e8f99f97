@@ -1,0 +1,1 @@
+{"human_lines":30,"total_added":32,"timestamp":"2026-03-11T15:53:53.1655738+02:00","trivial_lines":2,"ai_lines":0,"files_changed":["scripts/log_ai_output.ps1","scripts/log_ai_output.sh","test_file.js"],"ai_modified_lines":0,"author":"Avri !","proposals_count":1,"ai_percentage":0.0}
