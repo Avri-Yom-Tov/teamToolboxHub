@@ -1,0 +1,3 @@
+git-ai stats
+
+git log --show-notes=ai

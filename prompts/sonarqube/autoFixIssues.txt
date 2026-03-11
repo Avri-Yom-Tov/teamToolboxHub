@@ -1,0 +1,6 @@
+
+
+Read the projectKey from the local sonar-project.properties file, 
+prefix it with 'com.nice.', and use the SonarQube MCP server to fetch all issues for that exact project.
+Then analyze the project and automatically apply all recommended fixes for the issues found.
+
