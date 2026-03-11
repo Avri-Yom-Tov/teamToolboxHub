@@ -1,0 +1,36 @@
+scripts/userHub/searchByTenantId.js
+  be56219e8c976e3d 17-18,23,37,45,67,69-71,76-77,86-91
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.10",
+  "base_commit_sha": "1d765e44fe608abd377b3e65cfb71408d5f83143",
+  "prompts": {
+    "be56219e8c976e3d": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "b946c86e-1168-4be6-8956-42de79dcfcea",
+        "model": "unknown"
+      },
+      "human_author": "Avri ! <avraham.yom-tov@nice.com>",
+      "messages": [],
+      "total_additions": 91,
+      "total_deletions": 95,
+      "accepted_lines": 44,
+      "overriden_lines": 0
+    },
+    "f7946d60b087bcca": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "c4824056-3c34-4fbb-892a-62d5f174e767",
+        "model": "copilot/claude-sonnet-4.5"
+      },
+      "human_author": "Avri ! <avraham.yom-tov@nice.com>",
+      "messages": [],
+      "total_additions": 91,
+      "total_deletions": 95,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    }
+  }
+}
