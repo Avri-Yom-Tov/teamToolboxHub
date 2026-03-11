@@ -1,0 +1,1 @@
+{"files_changed":[".github/hooks/capture_ai.json","scripts/log_ai_output.ps1","scripts/log_ai_output.sh","test_file.js"],"ai_modified_lines":0,"timestamp":"2026-03-11T15:38:26.2832108+02:00","author":"Avri !","total_added":30,"human_lines":26,"ai_percentage":0.0,"trivial_lines":4,"proposals_count":0,"ai_lines":0}
