@@ -19,7 +19,8 @@ else
     echo "[AI Tracker] Warning: Failed to attach note to ${COMMIT_SHA:0:7}"
 fi
 
-rm -f "$BUFFER_DIR/last_proposal.txt"
+rm -rf "$BUFFER_DIR/proposals"
+rm -f "$BUFFER_DIR/all_proposals.txt"
 rm -f "$METADATA_FILE"
 
 if [ "$AI_TRACKER_PUSH_NOTES" = "true" ]; then

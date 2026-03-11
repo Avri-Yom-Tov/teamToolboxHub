@@ -28,7 +28,9 @@ jobs:
             fi
 
             TOTAL_AI=0
+            TOTAL_AI_MOD=0
             TOTAL_HUMAN=0
+            TOTAL_TRIVIAL=0
             COMMIT_COUNT=0
 
             for sha in $COMMITS; do
@@ -36,19 +38,24 @@ jobs:
               if [ -n "$NOTE" ]; then
                 COMMIT_COUNT=$((COMMIT_COUNT + 1))
                 AI=$(echo "$NOTE" | jq -r '.ai_lines // 0')
+                AI_MOD=$(echo "$NOTE" | jq -r '.ai_modified_lines // 0')
                 HUMAN=$(echo "$NOTE" | jq -r '.human_lines // 0')
+                TRIVIAL=$(echo "$NOTE" | jq -r '.trivial_lines // 0')
                 PCT=$(echo "$NOTE" | jq -r '.ai_percentage // 0')
                 TOTAL_AI=$((TOTAL_AI + AI))
+                TOTAL_AI_MOD=$((TOTAL_AI_MOD + AI_MOD))
                 TOTAL_HUMAN=$((TOTAL_HUMAN + HUMAN))
-                echo "Commit ${sha:0:7}: AI=$AI Human=$HUMAN ($PCT%)"
+                TOTAL_TRIVIAL=$((TOTAL_TRIVIAL + TRIVIAL))
+                echo "Commit ${sha:0:7}: AI=$AI Modified=$AI_MOD Human=$HUMAN Trivial=$TRIVIAL ($PCT%)"
               fi
             done
 
             echo ""
-            echo "Summary: $COMMIT_COUNT tracked commits | AI lines: $TOTAL_AI | Human lines: $TOTAL_HUMAN"
+            echo "Summary: $COMMIT_COUNT tracked commits | AI: $TOTAL_AI | Modified: $TOTAL_AI_MOD | Human: $TOTAL_HUMAN | Trivial: $TOTAL_TRIVIAL"
 
-            if [ "$TOTAL_AI" -gt 0 ] || [ "$TOTAL_HUMAN" -gt 0 ]; then
-              OVERALL_PCT=$(awk "BEGIN {printf \"%.1f\", ($TOTAL_AI/($TOTAL_AI+$TOTAL_HUMAN))*100}")
+            MEANINGFUL=$((TOTAL_AI + TOTAL_AI_MOD + TOTAL_HUMAN))
+            if [ "$MEANINGFUL" -gt 0 ]; then
+              OVERALL_PCT=$(awk "BEGIN {printf \"%.1f\", (($TOTAL_AI+$TOTAL_AI_MOD)/$MEANINGFUL)*100}")
               echo "Overall AI percentage: $OVERALL_PCT%"
             fi
           done

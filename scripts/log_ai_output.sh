@@ -11,9 +11,15 @@ GIT_DIR=$(git rev-parse --git-dir 2>/dev/null)
 BUFFER_DIR="$GIT_DIR/ai_buffer"
 mkdir -p "$BUFFER_DIR"
 
-echo "$AI_CODE" > "$BUFFER_DIR/last_proposal.txt"
+PROPOSALS_DIR="$BUFFER_DIR/proposals"
+mkdir -p "$PROPOSALS_DIR"
 
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+SAFE_TS=$(date +"%Y%m%d_%H%M%S_%N")
+echo "$AI_CODE" > "$PROPOSALS_DIR/${SAFE_TS}.txt"
+
+echo "$AI_CODE" >> "$BUFFER_DIR/all_proposals.txt"
+
 LINE_COUNT=$(echo "$AI_CODE" | wc -l)
 CHAR_COUNT=$(echo "$AI_CODE" | wc -c)
 

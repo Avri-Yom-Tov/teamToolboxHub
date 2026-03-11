@@ -22,9 +22,13 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "[AI Tracker] Warning: Failed to attach note to $($commitSha.Substring(0,7))"
 }
 
-$proposalFile = Join-Path $bufferDir "last_proposal.txt"
-if (Test-Path $proposalFile) {
-    Remove-Item $proposalFile -Force
+$proposalsDir = Join-Path $bufferDir "proposals"
+if (Test-Path $proposalsDir) {
+    Remove-Item $proposalsDir -Recurse -Force
+}
+$allProposalsFile = Join-Path $bufferDir "all_proposals.txt"
+if (Test-Path $allProposalsFile) {
+    Remove-Item $allProposalsFile -Force
 }
 if (Test-Path $metadataFile) {
     Remove-Item $metadataFile -Force

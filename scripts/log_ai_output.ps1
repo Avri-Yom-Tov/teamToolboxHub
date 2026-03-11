@@ -17,9 +17,18 @@ if (-not (Test-Path $bufferDir)) {
     New-Item -ItemType Directory -Path $bufferDir -Force | Out-Null
 }
 
+$proposalsDir = Join-Path $bufferDir "proposals"
+if (-not (Test-Path $proposalsDir)) {
+    New-Item -ItemType Directory -Path $proposalsDir -Force | Out-Null
+}
+
 $timestamp = Get-Date -Format "o"
-$proposalFile = Join-Path $bufferDir "last_proposal.txt"
+$safeTimestamp = (Get-Date -Format "yyyyMMdd_HHmmss_fff")
+$proposalFile = Join-Path $proposalsDir "$safeTimestamp.txt"
 Set-Content -Path $proposalFile -Value $aiCode -Encoding UTF8
+
+$allProposalsFile = Join-Path $bufferDir "all_proposals.txt"
+Add-Content -Path $allProposalsFile -Value $aiCode -Encoding UTF8
 
 $logEntry = @{
     timestamp = $timestamp
