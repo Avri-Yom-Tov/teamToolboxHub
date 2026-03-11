@@ -1,0 +1,39 @@
+scripts/deployment/getBuildNumbersOld.js
+  f4ea4faf74085178 1,3-23,109-110,113-114,116,118,121,123,125,128,132-133,136-138,140-141,153,155,157,159,162,164,167-169,171,174-176,178,181-183,185-186,189,197-199,201-202,204,207,211,214-215,218,220-222
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.10",
+  "base_commit_sha": "ab470a8f902b01e60ad072deb9834c40c7fea095",
+  "prompts": {
+    "f4ea4faf74085178": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "e56702c4-56aa-4b89-9d57-921aea2fae79",
+        "model": "default"
+      },
+      "human_author": "avriFromHome <yoti>",
+      "messages": [
+        {
+          "type": "user",
+          "text": "@scripts/deployment/getBuildNumbersOld.js \n\n\n\n\n\npls improve the logs and make code morden",
+          "timestamp": "2026-03-11T21:47:56.843Z"
+        },
+        {
+          "type": "assistant",
+          "text": "I’ll first inspect `getBuildNumbersOld.js`, then refactor it to modern JavaScript (e.g., `const`/`let`, async/await if relevant) and improve the logging with clearer messages and levels.",
+          "timestamp": "2026-03-11T21:48:11.061Z"
+        },
+        {
+          "type": "assistant",
+          "text": "### Summary of changes\n\n- **Logging upgrade**: Added timestamped log helpers (`logInfo`, `logWarn`, `logError`) with clear levels and more detailed messages throughout `findJobPath`, `getBuildNumber`, and `run` (including progress and reasons when values are `N/A`).\n- **More modern I/O**: Switched to `fs.promises` and `await fs.writeFile(...)` instead of `fs.writeFileSync`, keeping everything async/await.\n- **Config modernization**: Allowed `JENKINS_URL`, `USERNAME`, and `API_TOKEN` to be provided via environment variables while keeping your existing defaults.\n- **Minor fixes**: Fixed the final log message to correctly reference `buildNumbersOld.txt` and generally cleaned up formatting and header usage.",
+          "timestamp": "2026-03-11T21:48:40.131Z"
+        }
+      ],
+      "total_additions": 227,
+      "total_deletions": 191,
+      "accepted_lines": 83,
+      "overriden_lines": 0
+    }
+  }
+}
