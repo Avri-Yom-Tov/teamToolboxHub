@@ -40,13 +40,13 @@ const fetchAllTenants = async () => {
         }
 
         const data = await res.json();
-        console.log(data);
+        console.log(`Fetched page data: ${JSON.stringify(data, null, 2)}`);
 
         const chunk = data.tenants ?? [];
 
         allResults.push(...chunk);
 
-        console.log(chunk.length);
+        console.log(`Retrieved ${chunk.length} tenants in this chunk`);
 
         if (chunk.length === 0) {
             break;
@@ -54,7 +54,7 @@ const fetchAllTenants = async () => {
 
         const newLastRecordId = data.page?.lastRecordId;
 
-        console.log(newLastRecordId);
+        console.log(`Next page lastRecordId: ${newLastRecordId}`);
 
         if (!newLastRecordId || newLastRecordId === lastRecordId) {
             break;
