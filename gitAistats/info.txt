@@ -1,12 +1,8 @@
-{
-    "git_path": "C:\\Program Files\\Git\\cmd\\git.exe",
-    "prompt_storage": "notes",
-    "telemetry_oss": "off",
-    "allow_repositories": ["https://github.com/nice-cxone/*"], 
-    "disable_auto_updates": true,
-    "disable_version_checks": true,
-    "quiet": true
-}
+
+
+
+
+
 git_path הנתיב לבינארי של git על המחשב. חייבים לציין את זה על Windows כי git-ai צריך לדעת איפה git המקורי נמצא כדי לעשות proxy לפקודות.
 
 prompt_storage: "notes" הלב של כל ה-setup שלך. אומר ל-git-ai לשמור את כל נתוני ה-attribution בתוך git notes בתוך ה-repo עצמו — לא לוקאלית על המחשב של המפתח ולא בשרתים של git-ai. זה מה שמאפשר לך לראות את הנתונים מכל מחשב אחר ובGitHub Actions.

@@ -1,8 +1,26 @@
-const fs = require('fs');
+const fs = require('fs').promises;
 
-const JENKINS_URL = 'https://cxone-ci.niceincontact.com/';
-const USERNAME = 'xxx';
-const API_TOKEN = 'xxx';
+const JENKINS_URL = process.env.JENKINS_URL || 'https://cxone-ci.niceincontact.com/';
+const USERNAME = process.env.JENKINS_USER || 'xxx';
+const API_TOKEN = process.env.JENKINS_TOKEN || 'xxx';
+
+const LOG_LEVELS = {
+  INFO: 'INFO',
+  WARN: 'WARN',
+  ERROR: 'ERROR',
+};
+
+const formatLogMessage = (level, message) => {
+  const timestamp = new Date().toISOString();
+  return `[${timestamp}] [${level}] ${message}`;
+};
+
+const logInfo = (message) => console.log(formatLogMessage(LOG_LEVELS.INFO, message));
+const logWarn = (message) => console.warn(formatLogMessage(LOG_LEVELS.WARN, message));
+const logError = (message, error) => {
+  const errorSuffix = error ? ` | ${error.message || error}` : '';
+  console.error(formatLogMessage(LOG_LEVELS.ERROR, `${message}${errorSuffix}`));
+};
 
 const components = [
   'cloud-formation-applink-full-view-dashboard',
@@ -88,32 +106,41 @@ const components = [
 const findJobPath = async (componentName) => {
   const searchUrl = `${JENKINS_URL}/search/suggest?query=${encodeURIComponent(componentName)}`;
   const auth = Buffer.from(`${USERNAME}:${API_TOKEN}`).toString('base64');
-  
-  const response = await fetch(searchUrl, {
-    headers: {
-      'Authorization': `Basic ${auth}`
+
+  try {
+    const response = await fetch(searchUrl, {
+      headers: {
+        Authorization: `Basic ${auth}`,
+      },
+    });
+
+    if (!response.ok) {
+      logWarn(`Search request failed for "${componentName}" with status ${response.status}`);
+      return null;
     }
-  });
-  
-  if (!response.ok) {
+
+    const searchResults = await response.json();
+
+    if (!searchResults.suggestions || searchResults.suggestions.length === 0) {
+      logWarn(`No suggestions returned for "${componentName}"`);
+      return null;
+    }
+
+    for (const suggestion of searchResults.suggestions) {
+      if (suggestion.name && suggestion.name.includes(componentName)) {
+        const nameParts = suggestion.name.trim().split(/\s+/);
+        const jobPath = nameParts.join('/job/');
+        logInfo(`Found job path for "${componentName}": ${jobPath}`);
+        return jobPath;
+      }
+    }
+
+    logWarn(`No matching suggestion name found for "${componentName}"`);
+    return null;
+  } catch (error) {
+    logError(`Error while searching job path for "${componentName}"`, error);
     return null;
   }
-  
-  const searchResults = await response.json();
-  
-  if (!searchResults.suggestions || searchResults.suggestions.length === 0) {
-    return null;
-  }
-  
-  for (const suggestion of searchResults.suggestions) {
-    if (suggestion.name && suggestion.name.includes(componentName)) {
-      const nameParts = suggestion.name.trim().split(/\s+/);
-      const jobPath = nameParts.join('/job/');
-      return jobPath;
-    }
-  }
-  
-  return null;
 };
 
 const getBuildNumber = async (jobPath) => {
@@ -123,34 +150,43 @@ const getBuildNumber = async (jobPath) => {
     
     const consoleResponse = await fetch(consoleUrl, {
       headers: {
-        'Authorization': `Basic ${auth}`
+        Authorization: `Basic ${auth}`,
       },
-      redirect: 'follow'
+      redirect: 'follow',
     });
-    
+
     if (!consoleResponse.ok) {
+      logWarn(`Failed to fetch console log for job "${jobPath}" (status ${consoleResponse.status})`);
       return 'N/A';
     }
-    
+
     const fullLog = await consoleResponse.text();
-    
+
     const versionMatch = fullLog.match(/"displayName":"[^"]*version:\s*([^"]+)"/);
     if (versionMatch) {
-      return versionMatch[1].trim();
+      const version = versionMatch[1].trim();
+      logInfo(`Extracted version "${version}" for job "${jobPath}" from displayName`);
+      return version;
     }
-    
+
     const buildMatch = fullLog.match(/Build\.Number[=:]?\s*(\d+\.\d+)/);
     if (buildMatch) {
-      return buildMatch[1];
+      const buildNumber = buildMatch[1];
+      logInfo(`Extracted build number "${buildNumber}" for job "${jobPath}" from Build.Number`);
+      return buildNumber;
     }
-    
+
     const revisionMatch = fullLog.match(/REVISION[=:]?\s*(\d+\.\d+)/);
     if (revisionMatch) {
-      return revisionMatch[1];
+      const revision = revisionMatch[1];
+      logInfo(`Extracted revision "${revision}" for job "${jobPath}" from REVISION`);
+      return revision;
     }
-    
+
+    logWarn(`No build number or version found in console log for job "${jobPath}"`);
     return 'N/A';
   } catch (error) {
+    logError(`Error while getting build number for job "${jobPath}"`, error);
     return 'N/A';
   }
 };
@@ -158,32 +194,32 @@ const getBuildNumber = async (jobPath) => {
 const run = async () => {
   const results = [];
   let lineNum = 1;
-  
-  console.log('Processing components...\n');
-  
+
+  logInfo(`Starting processing of ${components.length} components.\n`);
+
   for (const component of components) {
-    console.log(`${lineNum}. Processing: ${component}`);
-    
+    logInfo(`${lineNum}/${components.length} Processing component: ${component}`);
+
     const jobPath = await findJobPath(component);
-    
+
     if (!jobPath) {
       results.push(`${lineNum}. ${component} = N/A`);
-      console.log(`   Build number: N/A\n`);
+      logWarn(`Build number for "${component}" is N/A (job path not found).\n`);
       lineNum++;
       continue;
     }
-    
+
     const buildNumber = await getBuildNumber(jobPath);
     results.push(`${lineNum}. ${component} = ${buildNumber}`);
-    console.log(`   Build number: ${buildNumber}\n`);
-    
+    logInfo(`Build number for "${component}": ${buildNumber}\n`);
+
     lineNum++;
   }
-  
+
   const output = results.join('\n');
-  fs.writeFileSync('buildNumbersOld.txt', output);
-  
-  console.log('\n=== Results saved to buildNumbers.txt ===');
+  await fs.writeFile('buildNumbersOld.txt', output, 'utf8');
+
+  logInfo('=== Results saved to buildNumbersOld.txt ===');
   console.log(output);
 };
 
