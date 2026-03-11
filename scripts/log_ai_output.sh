@@ -2,8 +2,14 @@
 INPUT=$(cat)
 [ -z "$INPUT" ] && exit 0
 
-AI_CODE=$(echo "$INPUT" | jq -r '.last_assistant_message // empty')
+TRANSCRIPT_PATH=$(echo "$INPUT" | jq -r '.transcript_path // empty')
+[ -z "$TRANSCRIPT_PATH" ] && exit 0
+[ ! -f "$TRANSCRIPT_PATH" ] && exit 0
+
+AI_CODE=$(jq -r '[.[] | select(.role == "assistant") | .content] | last // empty' "$TRANSCRIPT_PATH")
 [ -z "$AI_CODE" ] && exit 0
+
+SESSION_ID=$(echo "$INPUT" | jq -r '.sessionId // empty')
 
 GIT_DIR=$(git rev-parse --git-dir 2>/dev/null)
 [ -z "$GIT_DIR" ] && exit 0
@@ -23,4 +29,4 @@ echo "$AI_CODE" >> "$BUFFER_DIR/all_proposals.txt"
 LINE_COUNT=$(echo "$AI_CODE" | wc -l)
 CHAR_COUNT=$(echo "$AI_CODE" | wc -c)
 
-echo "{\"timestamp\":\"$TIMESTAMP\",\"proposal_length\":$CHAR_COUNT,\"proposal_lines\":$LINE_COUNT}" >> "$BUFFER_DIR/proposals.log"
+echo "{\"timestamp\":\"$TIMESTAMP\",\"session_id\":\"$SESSION_ID\",\"proposal_length\":$CHAR_COUNT,\"proposal_lines\":$LINE_COUNT}" >> "$BUFFER_DIR/proposals.log"

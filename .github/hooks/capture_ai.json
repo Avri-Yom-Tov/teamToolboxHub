@@ -1,10 +1,9 @@
 {
-    "version": 1,
     "hooks": {
-        "agentStop": [
+        "Stop": [
             {
                 "type": "command",
-                "bash": "./scripts/log_ai_output.sh",
+                "command": "./scripts/log_ai_output.sh",
                 "windows": "powershell -File scripts\\log_ai_output.ps1"
             }
         ]
