@@ -26,15 +26,17 @@ if (-not $transcriptPath -or -not (Test-Path $transcriptPath)) {
     exit 0
 }
 
-$transcript = Get-Content -Path $transcriptPath -Raw -Encoding UTF8 | ConvertFrom-Json -Depth 20
-if (-not $transcript) { exit 0 }
-
+$lines = Get-Content -Path $transcriptPath -Encoding UTF8
 $assistantMessages = @()
-foreach ($turn in $transcript) {
-    if ($turn.role -eq "assistant" -and $turn.content) {
-        $assistantMessages += $turn.content
+foreach ($line in $lines) {
+    if (-not $line.Trim()) { continue }
+    $entry = $line | ConvertFrom-Json -Depth 20 -ErrorAction SilentlyContinue
+    if ($entry -and $entry.type -eq "assistant.message" -and $entry.data -and $entry.data.content) {
+        $assistantMessages += $entry.data.content
     }
 }
+Add-Content -Path $debugLog -Value "$(Get-Date -Format 'o') parsed $($lines.Count) lines, found $($assistantMessages.Count) assistant messages"
+
 if ($assistantMessages.Count -eq 0) { exit 0 }
 $aiCode = $assistantMessages[-1]
 Add-Content -Path $debugLog -Value "$(Get-Date -Format 'o') extracted assistant message, length: $($aiCode.Length)"
@@ -59,7 +61,7 @@ Add-Content -Path $allProposalsFile -Value $aiCode -Encoding UTF8
 
 $logEntry = @{
     timestamp = $timestamp
-    session_id = $payload.sessionId
+    session_id = $payload.session_id
     proposal_length = $aiCode.Length
     proposal_lines = ($aiCode -split "`n").Count
 } | ConvertTo-Json -Compress

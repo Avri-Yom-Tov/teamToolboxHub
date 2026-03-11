@@ -6,10 +6,10 @@ TRANSCRIPT_PATH=$(echo "$INPUT" | jq -r '.transcript_path // empty')
 [ -z "$TRANSCRIPT_PATH" ] && exit 0
 [ ! -f "$TRANSCRIPT_PATH" ] && exit 0
 
-AI_CODE=$(jq -r '[.[] | select(.role == "assistant") | .content] | last // empty' "$TRANSCRIPT_PATH")
+AI_CODE=$(jq -sr '[.[] | select(.type == "assistant.message") | .data.content] | last // empty' "$TRANSCRIPT_PATH")
 [ -z "$AI_CODE" ] && exit 0
 
-SESSION_ID=$(echo "$INPUT" | jq -r '.sessionId // empty')
+SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty')
 
 GIT_DIR=$(git rev-parse --git-dir 2>/dev/null)
 [ -z "$GIT_DIR" ] && exit 0
