@@ -10,20 +10,17 @@ const token = 'here';
 const environment = "dev";
 const searchForTenantId = "11eec997-c663-3860-895b-0242ac110005";
 
-
-
 const fetchAllTenants = async () => {
-
     const BASE_URL = `https://api-na1.${environment}.niceincontact.com/tenants/v2/current/subtenants/aggregatedInfo?withOwnershipProperties=true`;
 
     const headers = {
-        "accept": "application/json, text/plain, */*",
-        "authorization": `Bearer ${token}`,
+        accept: "application/json, text/plain, */*",
+        authorization: `Bearer ${token}`,
         "content-type": "application/json",
         "originating-service-identifier": "tm"
     };
 
-    let allResults = [];
+    const allResults = [];
     let lastRecordId = null;
     const pageSize = 500;
 
@@ -37,6 +34,7 @@ const fetchAllTenants = async () => {
             headers,
             body
         });
+
         if (!res.ok) {
             throw new Error(`Request failed: ${res.status}`);
         }
@@ -44,7 +42,7 @@ const fetchAllTenants = async () => {
         const data = await res.json();
         console.log(data);
 
-        const chunk = data.tenants || [];
+        const chunk = data.tenants ?? [];
 
         allResults.push(...chunk);
 
@@ -66,23 +64,17 @@ const fetchAllTenants = async () => {
     }
 
     return allResults;
-}
+};
 
-
-
-
-
-
-
-fetchAllTenants()
-
-    .then(tenants => {
+const searchTenant = async () => {
+    try {
+        const tenants = await fetchAllTenants();
 
         const tenantIds = tenants.map(({ tenantId }) => tenantId);
         console.log("Total tenants :", tenantIds.length);
 
-
-        const foundTenant = tenants.find(t => t.tenantId === searchForTenantId);
+        const foundTenant = tenants.find(({ tenantId }) => tenantId === searchForTenantId);
+        
         if (foundTenant) {
             console.log(`\nTenant ${searchForTenantId} found !`);
             console.log("\nFull tenant data :");
@@ -91,5 +83,9 @@ fetchAllTenants()
         }
 
         console.log(`\nTenant ${searchForTenantId} not found !`);
-    })
-    .catch(err => console.error(err));
+    } catch (err) {
+        console.error(err);
+    }
+};
+
+searchTenant();
