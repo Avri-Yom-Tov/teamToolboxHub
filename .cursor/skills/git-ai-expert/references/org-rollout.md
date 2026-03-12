@@ -425,6 +425,80 @@ git-ai blame src/main.ts
 
 ---
 
+## Windows Performance & Troubleshooting
+
+Windows environments require extra attention during rollout. These are common issues and their fixes.
+
+### Windows Defender / Antivirus Exclusions
+
+Real-time scanning adds latency to every `git-ai` invocation. Exclude the binary and data directories:
+
+```powershell
+# Run as Administrator
+Add-MpPreference -ExclusionPath "$env:USERPROFILE\.git-ai"
+Add-MpPreference -ExclusionProcess "$env:USERPROFILE\.git-ai\bin\git-ai.exe"
+Add-MpPreference -ExclusionProcess "$env:USERPROFILE\.git-ai\bin\git.exe"
+```
+
+For enterprise MDM (Intune / GPO), deploy these exclusions via policy before rolling out git-ai.
+
+### PATH Resolution
+
+`~/.git-ai/bin` must appear **before** Git for Windows in PATH. Verify:
+
+```powershell
+(Get-Command git).Source   # should show ~\.git-ai\bin\git.exe
+```
+
+If it shows `C:\Program Files\Git\cmd\git.exe`, the PATH order is wrong. Fix:
+
+```powershell
+$gitAiBin = "$env:USERPROFILE\.git-ai\bin"
+$currentPath = [Environment]::GetEnvironmentVariable("PATH", "User")
+# Remove existing entry, then prepend
+$cleaned = ($currentPath -split ';' | Where-Object { $_ -notlike '*\.git-ai\bin*' }) -join ';'
+[Environment]::SetEnvironmentVariable("PATH", "$gitAiBin;$cleaned", "User")
+```
+
+Restart the terminal after PATH changes.
+
+### BeyondTrust / Restricted Admin Environments
+
+When Machine-level PATH updates are blocked (e.g., BeyondTrust, CyberArk):
+
+- Use **User-level PATH only** (Option B from Distribution) — this does not require admin
+- If User PATH is also locked, request IT to add `%USERPROFILE%\.git-ai\bin` to Machine PATH via GPO
+- The installer detects this and prints manual instructions when Machine PATH update fails
+
+### Git Bash Integration
+
+Git Bash uses its own PATH from `~/.bashrc`, separate from PowerShell/CMD. The installer configures this automatically, but verify:
+
+```bash
+# In Git Bash
+which git          # should show ~/.git-ai/bin/git
+git-ai --version   # should show version
+```
+
+If not working, add manually to `~/.bashrc`:
+
+```bash
+export PATH="$HOME/.git-ai/bin:$PATH"
+```
+
+### Common Windows Issues
+
+| Issue | Solution |
+|-------|----------|
+| `git-ai` slow on first run after reboot | Windows Defender scanning — add exclusions above |
+| PATH correct in PowerShell but not CMD | Restart CMD or log out/in to pick up User PATH changes |
+| PATH correct in CMD but not Git Bash | Add to `~/.bashrc` manually |
+| `git-og` not found | `git-og.cmd` shim missing — reinstall or create manually |
+| Symlink creation fails (Option C) | Enable Developer Mode or run as Administrator |
+| `EPERM` or access denied on `.git-ai` | Antivirus quarantine — add exclusion and restore files |
+
+---
+
 ## Free vs Paid Comparison
 
 | Feature | Free (OSS) | Teams | Enterprise |
