@@ -28,7 +28,7 @@ jobs:
         run: git fetch origin refs/notes/*:refs/notes/* || echo "No notes yet"
 
       - name: Fetch base branch
-        run: git fetch origin ${{ github.event.pull_request.base.ref }} --depth=0
+        run: git fetch origin ${{ github.event.pull_request.base.ref }}
 
       - name: Compute PR stats
         run: |
