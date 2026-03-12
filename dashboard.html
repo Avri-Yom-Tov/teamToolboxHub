@@ -32,8 +32,11 @@
     .split-labels{display:flex;justify-content:space-between;margin-top:.5rem;font-size:.72rem;color:var(--sub);font-family:'IBM Plex Mono',monospace}
     .accept-wrap{display:flex;align-items:center;gap:1.5rem;margin-top:.5rem}
     .accept-pct{font-size:2.8rem;font-weight:700;font-family:'IBM Plex Mono',monospace;color:var(--green);text-shadow:0 0 30px rgba(52,211,153,.3)}
-    .accept-detail{font-size:.78rem;color:var(--sub);line-height:1.9}
-    .accept-detail strong{color:var(--text)}
+    .accept-detail{display:flex;flex-direction:column;gap:.5rem}
+    .accept-stat{display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding:.35rem .65rem;background:var(--bg);border:1px solid var(--border);border-radius:6px;transition:border-color .2s ease}
+    .accept-stat:hover{border-color:var(--muted)}
+    .accept-stat-label{font-size:.68rem;font-family:'IBM Plex Mono',monospace;letter-spacing:.06em;color:var(--sub);text-transform:uppercase}
+    .accept-stat-val{font-size:.85rem;font-weight:700;font-family:'IBM Plex Mono',monospace;color:var(--text)}
     .agent{font-size:1.6rem;font-weight:600;display:flex;align-items:center;gap:.6rem;margin-top:.5rem}
     .dot{width:10px;height:10px;border-radius:50%;background:var(--blue);flex-shrink:0}
     .model-row{display:flex;align-items:center;gap:.75rem;margin-bottom:.6rem}
@@ -67,7 +70,7 @@
   <header>
     <h1>AI Authorship Dashboard</h1>
     <p>Cross-agent statistics and session analysis to improve your AI-aided development.</p>
-    <div class="ts">Updated: 2026-03-12 21:43 UTC</div>
+    <div class="ts">Updated: 2026-03-12 21:48 UTC</div>
   </header>
 
   <div class="grid-top">
@@ -88,9 +91,9 @@
       <div class="accept-wrap">
         <div class="accept-pct">10.5%</div>
         <div class="accept-detail">
-          <div>Generated: <strong>1076</strong></div>
-          <div>Committed: <strong>113</strong></div>
-          <div>Accepted as-is: <strong>113</strong></div>
+          <div class="accept-stat"><span class="accept-stat-label">Generated</span><span class="accept-stat-val c-blue">1076</span></div>
+          <div class="accept-stat"><span class="accept-stat-label">Committed</span><span class="accept-stat-val c-green">113</span></div>
+          <div class="accept-stat"><span class="accept-stat-label">Accepted</span><span class="accept-stat-val c-orange">113</span></div>
         </div>
       </div>
     </div>
@@ -177,16 +180,16 @@
       <div class="tl-count">1</div>
     </div><div class="tl-col">
       <div class="tl-bar-wrap">
-        <div class="tl-bar" style="height:41%" title="12 commits"></div>
+        <div class="tl-bar" style="height:40%" title="12 commits"></div>
       </div>
       <div class="tl-label">03-11</div>
       <div class="tl-count">12</div>
     </div><div class="tl-col">
       <div class="tl-bar-wrap">
-        <div class="tl-bar" style="height:100%" title="29 commits"></div>
+        <div class="tl-bar" style="height:100%" title="30 commits"></div>
       </div>
       <div class="tl-label">03-12</div>
-      <div class="tl-count">29</div>
+      <div class="tl-count">30</div>
     </div></div>
     </div>
     <div class="card">
@@ -194,14 +197,14 @@
       <div class="contrib-wrap"><div class="contrib-tag">avriFromHome</div><div class="contrib-tag">Avri !</div></div>
       <div class="divider"></div>
       <div class="meta">
-        <span>Total commits: <strong>41</strong></span>
+        <span>Total commits: <strong>42</strong></span>
         <span>With attribution: <strong style="color:var(--green)">19</strong></span>
-        <span>Human lines: <strong>2572</strong></span>
+        <span>Human lines: <strong>2575</strong></span>
         <span>AI lines: <strong style="color:var(--accent)">113</strong></span>
       </div>
     </div>
   </div>
 
-  <div class="footer">powered by git-ai · nice-cxone · data stored exclusively in git notes</div>
+  <div class="footer">powered by git-ai · nice-cxone </div>
 </body>
 </html>
