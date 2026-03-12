@@ -15,8 +15,8 @@ Add-MpPreference -ExclusionPath "C:\Users\\.git-ai\bin"
 Add-MpPreference -ExclusionPath "C:\Users\avrahamy\.git-ai"
 
 
-  "allow_repositories": [
-    "https://github.com/nice-cxone/*",
-    "https://github.com/Avri-Yom-Tov/teamToolboxHub.git"
-  ],
 
+
+
+"git.path": "C:\\Users\\avrahamy\\.git-ai\\bin\\git",
+"git.path": "C:\\Users\\avrahamy\\AppData\\Local\\Programs\\Git\\cmd\\git.exe",
