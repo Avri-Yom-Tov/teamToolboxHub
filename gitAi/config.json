@@ -1,9 +1,0 @@
-{
-    "git_path": "C:\\Program Files\\Git\\cmd\\git.exe",
-    "prompt_storage": "notes",
-    "telemetry_oss": "off",
-    "allow_repositories": ["https://github.com/nice-cxone/*"], 
-    "disable_auto_updates": true,
-    "disable_version_checks": true,
-    "quiet": true
-}
