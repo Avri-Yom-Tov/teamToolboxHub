@@ -1,4 +1,4 @@
-const fs = require('fs');
+const fsHere = require('fs');
 
 const JENKINS_URL = 'https://cxone-ci.devops.niceincontact.com/';
 const USERNAME = 'xxx';
@@ -133,9 +133,8 @@ const getBuildNumber = async (jobPath) => {
   const fullLog = await consoleResponse.text();
   
   const revisionMatch = fullLog.match(/revision=(\d+\.\d+)/);
-  if (revisionMatch) {
-    return revisionMatch[1];
-  }
+
+  if (revisionMatch) return revisionMatch[1];
   
   const versionMatch = fullLog.match(/"displayName":"[^"]*version:\s*([^"]+)"/);
   if (versionMatch) {
@@ -162,6 +161,7 @@ const run = async () => {
     const jobPath = await findJobPath(component);
     
     if (!jobPath) {
+
       results.push(`${lineNum}. ${component} = N/A`);
       console.log(`   Build number: N/A\n`);
       lineNum++;
@@ -176,7 +176,7 @@ const run = async () => {
   }
   
   const output = results.join('\n');
-  fs.writeFileSync('buildNumbersNew.txt', output);
+  fsHere.writeFileSync('buildNumbersNew.txt', output);
   
   console.log('\n=== Results saved to buildNumbers.txt ===');
   console.log(output);

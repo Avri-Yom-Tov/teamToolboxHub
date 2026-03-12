@@ -29,7 +29,7 @@ $role_name = 'GroupAccess-Developers-Recording'
 $target_account_num_codeartifact = '369498121101' 
 $m2_config_file = "C:\Users\$env:UserName\.m2\settings.xml"
 $target_profile_name_codeartifact = 'GroupAccess-NICE-Developers'
-$mfa_secret_key = $env:awsSecretHere
+$mfa_secret_key = $env:mfaSecretKey
 
 $Global:AccountList = @(
     [PSCustomObject]@{ AccountId = 730335479582; Name = "rec-dev" }
@@ -249,10 +249,10 @@ $xaml = @'
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     x:Class="System.Windows.Window"
     Title="AWS Credential Manager"
-    Width="800"
-    MinWidth="800"
-    Height="550"
-    MinHeight="550"
+    Width="850"
+    MinWidth="850"
+    Height="600"
+    MinHeight="600"
     Name="CredentialWindow"
     AllowsTransparency="True"
     BorderThickness="0"
@@ -261,37 +261,134 @@ $xaml = @'
     WindowStyle="None"
     Background="Transparent">
     <Window.Resources>
-
-        <SolidColorBrush x:Key="Button.Success.Background" Color="#16A34A" />
-        <SolidColorBrush x:Key="Button.Warning.Background" Color="#EA580C" />
-        <SolidColorBrush x:Key="Button.Danger.Background" Color="#DC2626" />
-
+        
+        <SolidColorBrush x:Key="Button.Static.Background" Color="#FFFBFBFB" />
+        <SolidColorBrush x:Key="Button.Static.Border" Color="#FFCCCCCC" />
+        <SolidColorBrush x:Key="Button.MouseOver.Background" Color="#FF005FB8" />
+        <SolidColorBrush x:Key="Button.MouseOver.Foreground" Color="#FFFFFFFF" />
+        <SolidColorBrush x:Key="Button.MouseOver.Border" Color="#FF005FB8" />
+        <SolidColorBrush x:Key="Button.Pressed.Background" Color="#FF606060" />
+        <SolidColorBrush x:Key="Button.Pressed.Border" Color="#FF606060" />
+        <SolidColorBrush x:Key="Button.Disabled.Background" Color="#FFF0F0F0" />
+        <SolidColorBrush x:Key="Button.Disabled.Border" Color="#FFADB2B5" />
+        <SolidColorBrush x:Key="Button.Disabled.Foreground" Color="#FF838383" />
+        <SolidColorBrush x:Key="Button.Default.Foreground" Color="White" />
+        <SolidColorBrush x:Key="Button.Default.Background" Color="#FF005FB8" />
+        <SolidColorBrush x:Key="Button.Default.Border" Color="#FF005FB8" />
+        <SolidColorBrush x:Key="Button.Success.Background" Color="#FF4CAF50" />
+        <SolidColorBrush x:Key="Button.Warning.Background" Color="#FFFF9800" />
+        <SolidColorBrush x:Key="Button.Danger.Background" Color="#FFF44336" />
+        
         <Style TargetType="{x:Type Button}">
             <Setter Property="FocusVisualStyle" Value="{x:Null}" />
-            <Setter Property="Background" Value="#2563EB" />
-            <Setter Property="Foreground" Value="White" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Padding" Value="16,10" />
+            <Setter Property="BorderBrush" Value="{StaticResource Button.Static.Border}" />
+            <Setter Property="Background" Value="{StaticResource Button.Static.Background}" />
+            <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.ControlTextBrushKey}}" />
+            <Setter Property="BorderThickness" Value="1,1,1,2" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Padding" Value="12,8,12,8" />
             <Setter Property="FontFamily" Value="Segoe UI" />
-            <Setter Property="FontSize" Value="13" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="Normal" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type Button}">
-                        <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="8">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
-                                              Margin="{TemplateBinding Padding}" />
+                        <Border BorderThickness="0" Background="{TemplateBinding Background}" CornerRadius="4">
+                            <Border x:Name="border" BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    Background="{TemplateBinding Background}" SnapsToDevicePixels="true"
+                                    CornerRadius="4" Padding="0" Margin="0">
+                                <ContentPresenter x:Name="contentPresenter" Focusable="False"
+                                        HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                        Margin="{TemplateBinding Padding}" RecognizesAccessKey="True"
+                                        SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
+                                        VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                            </Border>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsDefault" Value="true">
+                    <Setter Property="BorderBrush" Value="{StaticResource Button.Default.Border}" />
+                    <Setter Property="Background" Value="{StaticResource Button.Default.Background}" />
+                    <Setter Property="Foreground" Value="{StaticResource Button.Default.Foreground}" />
+                </Trigger>
+                <Trigger Property="IsMouseOver" Value="true">
+                    <Setter Property="Background" Value="{StaticResource Button.MouseOver.Background}" />
+                    <Setter Property="Foreground" Value="{StaticResource Button.MouseOver.Foreground}" />
+                    <Setter Property="BorderBrush" Value="{StaticResource Button.MouseOver.Border}" />
+                </Trigger>
+                <Trigger Property="IsPressed" Value="true">
+                    <Setter Property="Background" Value="{StaticResource Button.Pressed.Background}" />
+                    <Setter Property="BorderBrush" Value="{StaticResource Button.Pressed.Border}" />
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="false">
+                    <Setter Property="Background" Value="{StaticResource Button.Disabled.Background}" />
+                    <Setter Property="BorderBrush" Value="{StaticResource Button.Disabled.Background}" />
+                    <Setter Property="TextElement.Foreground" Value="{StaticResource Button.Disabled.Foreground}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        
+        <SolidColorBrush x:Key="ComboBox.Static.Background" Color="White" />
+        <SolidColorBrush x:Key="ComboBox.Static.Border" Color="#FFBDBDBD" />
+        <SolidColorBrush x:Key="ComboBox.MouseOver.Background" Color="#FFFFFFFF" />
+        <SolidColorBrush x:Key="ComboBox.MouseOver.Border" Color="#FF005FB8" />
+        <SolidColorBrush x:Key="ComboBox.Focus.Border" Color="#FF005FB8" />
+        
+        <Style TargetType="{x:Type ComboBox}">
+            <Setter Property="Background" Value="{StaticResource ComboBox.Static.Background}" />
+            <Setter Property="BorderBrush" Value="{StaticResource ComboBox.Static.Border}" />
+            <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.ControlTextBrushKey}}" />
+            <Setter Property="BorderThickness" Value="1,1,1,2" />
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Padding" Value="12,8,12,8" />
+            <Setter Property="Height" Value="40" />
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="true">
+                    <Setter Property="Background" Value="{StaticResource ComboBox.MouseOver.Background}" />
+                    <Setter Property="BorderBrush" Value="{StaticResource ComboBox.MouseOver.Border}" />
+                </Trigger>
+                <Trigger Property="IsKeyboardFocused" Value="true">
+                    <Setter Property="BorderBrush" Value="{StaticResource ComboBox.Focus.Border}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <SolidColorBrush x:Key="TextBox.Static.Border" Color="#7F7A7A7A" />
+        <SolidColorBrush x:Key="TextBox.MouseOver.Border" Color="#FF005FB8" />
+        <SolidColorBrush x:Key="TextBox.Focus.Border" Color="#FF005FB8" />
+        
+        <Style TargetType="{x:Type TextBox}">
+            <Setter Property="Background" Value="{DynamicResource {x:Static SystemColors.WindowBrushKey}}" />
+            <Setter Property="BorderBrush" Value="{StaticResource TextBox.Static.Border}" />
+            <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.ControlTextBrushKey}}" />
+            <Setter Property="Padding" Value="12,8,12,8" />
+            <Setter Property="BorderThickness" Value="1,1,1,2" />
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type TextBox}">
+                        <Border x:Name="border" BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Background="{TemplateBinding Background}" SnapsToDevicePixels="True"
+                                CornerRadius="4">
+                            <ScrollViewer x:Name="PART_ContentHost" Focusable="false"
+                                        HorizontalScrollBarVisibility="Hidden"
+                                        VerticalScrollBarVisibility="Hidden" />
                         </Border>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="Opacity" Value="0.85" />
+                            <Trigger Property="IsMouseOver" Value="true">
+                                <Setter Property="BorderBrush" TargetName="border"
+                                        Value="{StaticResource TextBox.MouseOver.Border}" />
                             </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="border" Property="Opacity" Value="0.7" />
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="border" Property="Opacity" Value="0.4" />
+                            <Trigger Property="IsKeyboardFocused" Value="true">
+                                <Setter Property="BorderBrush" TargetName="border"
+                                        Value="{StaticResource TextBox.Focus.Border}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -299,63 +396,68 @@ $xaml = @'
             </Setter>
         </Style>
 
-        <Style TargetType="{x:Type ComboBox}">
-            <Setter Property="Background" Value="White" />
-            <Setter Property="BorderBrush" Value="#CBD5E1" />
-            <Setter Property="BorderThickness" Value="1.5" />
-            <Setter Property="Foreground" Value="#0F172A" />
+        <Style TargetType="{x:Type GroupBox}">
+            <Setter Property="BorderBrush" Value="#FFE0E0E0" />
+            <Setter Property="Background" Value="#FFFFFFFF" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="15" />
             <Setter Property="FontFamily" Value="Segoe UI" />
-            <Setter Property="FontSize" Value="13" />
-            <Setter Property="Padding" Value="12,9" />
-            <Setter Property="Height" Value="40" />
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="BorderBrush" Value="#2563EB" />
-                </Trigger>
-                <Trigger Property="IsKeyboardFocused" Value="True">
-                    <Setter Property="BorderBrush" Value="#2563EB" />
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style TargetType="{x:Type TextBox}">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Foreground" Value="#1E293B" />
-            <Setter Property="FontFamily" Value="Cascadia Code, Consolas" />
-            <Setter Property="FontSize" Value="11.5" />
+            <Setter Property="FontSize" Value="14" />
             <Setter Property="Template">
                 <Setter.Value>
-                    <ControlTemplate TargetType="{x:Type TextBox}">
-                        <Border Background="{TemplateBinding Background}" BorderThickness="0">
-                            <ScrollViewer x:Name="PART_ContentHost" Focusable="false"
-                                          HorizontalScrollBarVisibility="Hidden"
-                                          VerticalScrollBarVisibility="Hidden" />
-                        </Border>
+                    <ControlTemplate TargetType="{x:Type GroupBox}">
+                        <Grid SnapsToDevicePixels="true">
+                            <Border BorderBrush="{TemplateBinding BorderBrush}" CornerRadius="8"
+                                    BorderThickness="{TemplateBinding BorderThickness}" Grid.ColumnSpan="4"
+                                    Grid.Row="1" Grid.RowSpan="3" Background="{TemplateBinding Background}">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="8" ShadowDepth="2" Color="#FFE0E0E0" Opacity="0.3" />
+                                </Border.Effect>
+                                <DockPanel>
+                                    <ContentPresenter DockPanel.Dock="Top"
+                                                Margin="{TemplateBinding Padding}" ContentSource="Header"
+                                                RecognizesAccessKey="True"
+                                                SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
+                                                HorizontalAlignment="Stretch" VerticalAlignment="Top" />
+                                    <ContentPresenter DockPanel.Dock="Top"
+                                                Margin="{TemplateBinding Padding}"
+                                                SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                                </DockPanel>
+                            </Border>
+                        </Grid>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
 
+        <SolidColorBrush x:Key="ProgressBar.Track" Color="#FFE8E8E8" />
+        <SolidColorBrush x:Key="ProgressBar.Indicator" Color="#FF005FB8" />
+        
         <Style TargetType="{x:Type ProgressBar}">
-            <Setter Property="Height" Value="3" />
+            <Setter Property="Height" Value="12" />
             <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Background" Value="#E2E8F0" />
-            <Setter Property="Foreground" Value="#2563EB" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type ProgressBar}">
-                        <Border x:Name="TemplateRoot" Background="{TemplateBinding Background}" CornerRadius="2">
+                        <Border x:Name="TemplateRoot" BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}" 
+                                Background="{StaticResource ProgressBar.Track}" CornerRadius="6">
                             <Grid>
                                 <Rectangle x:Name="PART_Track" />
-                                <Grid x:Name="PART_Indicator" ClipToBounds="True" HorizontalAlignment="Left">
-                                    <Rectangle x:Name="Indicator" Fill="{TemplateBinding Foreground}" RadiusX="2" RadiusY="2" />
-                                    <Rectangle x:Name="Animation" RadiusX="2" RadiusY="2" RenderTransformOrigin="0.5,0.5">
+                                <Grid x:Name="PART_Indicator" ClipToBounds="true" HorizontalAlignment="Left">
+                                    <Rectangle x:Name="Indicator" Fill="{StaticResource ProgressBar.Indicator}" 
+                                              RadiusX="6" RadiusY="6">
+                                        <Rectangle.Effect>
+                                            <DropShadowEffect BlurRadius="4" ShadowDepth="1" 
+                                                            Color="#33005FB8" Opacity="0.3" />
+                                        </Rectangle.Effect>
+                                    </Rectangle>
+                                    <Rectangle x:Name="Animation" RadiusX="6" RadiusY="6" RenderTransformOrigin="0.5,0.5">
                                         <Rectangle.Fill>
                                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
                                                 <GradientStop Color="Transparent" Offset="0" />
-                                                <GradientStop Color="#2563EB" Offset="0.4" />
-                                                <GradientStop Color="#60A5FA" Offset="0.6" />
+                                                <GradientStop Color="#FF005FB8" Offset="0.4" />
+                                                <GradientStop Color="#FF005FB8" Offset="0.6" />
                                                 <GradientStop Color="Transparent" Offset="1" />
                                             </LinearGradientBrush>
                                         </Rectangle.Fill>
@@ -372,7 +474,14 @@ $xaml = @'
                             </Grid>
                         </Border>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsIndeterminate" Value="True">
+                            <Trigger Property="Orientation" Value="Vertical">
+                                <Setter Property="LayoutTransform" TargetName="TemplateRoot">
+                                    <Setter.Value>
+                                        <RotateTransform Angle="-90" />
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsIndeterminate" Value="true">
                                 <Setter Property="Visibility" TargetName="Indicator" Value="Collapsed" />
                                 <Setter Property="Visibility" TargetName="PART_Track" Value="Collapsed" />
                                 <Setter Property="Visibility" TargetName="Animation" Value="Visible" />
@@ -386,17 +495,17 @@ $xaml = @'
         <Style TargetType="Window">
             <Style.Triggers>
                 <Trigger Property="IsActive" Value="False">
-                    <Setter Property="BorderBrush" Value="#CBD5E1" />
+                    <Setter Property="BorderBrush" Value="#FFAAAAAA" />
                 </Trigger>
                 <Trigger Property="IsActive" Value="True">
-                    <Setter Property="BorderBrush" Value="#2563EB" />
+                    <Setter Property="BorderBrush" Value="#FF005FB8" />
                 </Trigger>
             </Style.Triggers>
         </Style>
-
+        
         <Style x:Key="TitleBarButtonStyle" TargetType="Button">
-            <Setter Property="Width" Value="36" />
-            <Setter Property="Height" Value="36" />
+            <Setter Property="Width" Value="32" />
+            <Setter Property="Height" Value="32" />
             <Setter Property="Foreground" Value="White" />
             <Setter Property="Padding" Value="0" />
             <Setter Property="WindowChrome.IsHitTestVisibleInChrome" Value="True" />
@@ -406,9 +515,9 @@ $xaml = @'
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type Button}">
-                        <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="6" SnapsToDevicePixels="True">
-                            <Viewbox Stretch="Uniform" Margin="9" Width="14" Height="14">
-                                <Path x:Name="ContentPath" Data="" Stroke="{TemplateBinding Foreground}" StrokeThickness="1.5" />
+                        <Border x:Name="border" Background="{TemplateBinding Background}" BorderThickness="0" SnapsToDevicePixels="true">
+                            <Viewbox Name="ContentViewbox" Stretch="Uniform" Margin="6" Width="16" Height="16">
+                                <Path Name="ContentPath" Data="" Stroke="{TemplateBinding Foreground}" StrokeThickness="1.5"/>
                             </Viewbox>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -416,10 +525,10 @@ $xaml = @'
                                 <Setter TargetName="ContentPath" Property="Data" Value="M 0,0.5 H 10" />
                             </Trigger>
                             <Trigger Property="Tag" Value="Close">
-                                <Setter TargetName="ContentPath" Property="Data" Value="M 0.35,0.35 9.65,9.65 M 0.35,9.65 9.65,0.35" />
+                                <Setter TargetName="ContentPath" Property="Data" Value="M 0.35355339,0.35355339 9.3535534,9.3535534 M 0.35355339,9.3535534 9.3535534,0.35355339" />
                             </Trigger>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#28FFFFFF" />
+                            <Trigger Property="IsMouseOver" Value="true">
+                                <Setter TargetName="border" Property="Background" Value="#33FFFFFF" />
                             </Trigger>
                             <MultiTrigger>
                                 <MultiTrigger.Conditions>
@@ -427,7 +536,7 @@ $xaml = @'
                                     <Condition Property="Tag" Value="Close" />
                                 </MultiTrigger.Conditions>
                                 <MultiTrigger.Setters>
-                                    <Setter TargetName="border" Property="Background" Value="#FFEF4444" />
+                                    <Setter TargetName="border" Property="Background" Value="#FFE81123" />
                                 </MultiTrigger.Setters>
                             </MultiTrigger>
                         </ControlTemplate.Triggers>
@@ -435,139 +544,94 @@ $xaml = @'
                 </Setter.Value>
             </Setter>
         </Style>
-
     </Window.Resources>
-
+    
     <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="44" ResizeBorderThickness="4" CornerRadius="12" />
+        <WindowChrome CaptionHeight="32" ResizeBorderThickness="2" CornerRadius="8" />
     </WindowChrome.WindowChrome>
 
-    <Border Name="WinBorder"
-            BorderBrush="{Binding Path=BorderBrush, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
-            BorderThickness="1" CornerRadius="12" Background="#F1F5F9">
+    <Border Name="WinBorder" BorderBrush="{Binding Path=BorderBrush, RelativeSource={RelativeSource AncestorType={x:Type Window}}}" BorderThickness="1" CornerRadius="8" Background="#FFF7F7F7">
         <Border.Effect>
-            <DropShadowEffect BlurRadius="32" ShadowDepth="8" Color="#64748B" Opacity="0.18" />
+            <DropShadowEffect BlurRadius="15" ShadowDepth="5" Color="#FF959595" Opacity="0.3" />
         </Border.Effect>
         <Grid Name="MainGrid" Background="Transparent">
             <Grid.RowDefinitions>
-                <RowDefinition Height="44" />
+                <RowDefinition Height="32" />
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <!-- Title Bar -->
-            <Border Grid.Row="0" CornerRadius="12,12,0,0" BorderThickness="0">
-                <Border.Background>
-                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                        <GradientStop Color="#1E3A8A" Offset="0" />
-                        <GradientStop Color="#2563EB" Offset="1" />
-                    </LinearGradientBrush>
-                </Border.Background>
-                <DockPanel Height="44" Margin="6,0">
-                    <Button DockPanel.Dock="Right" Name="CloseButton" Style="{StaticResource TitleBarButtonStyle}" Tag="Close" Margin="0,0,4,0" />
+            <Border Grid.Row="0" CornerRadius="8,8,0,0" BorderThickness="0" Background="#FF005FB8">
+                <DockPanel Height="32">
+                    <Button DockPanel.Dock="Right" Name="CloseButton" Style="{StaticResource TitleBarButtonStyle}" Tag="Close" />
                     <Button DockPanel.Dock="Right" Name="MinimizeButton" Style="{StaticResource TitleBarButtonStyle}" Tag="Minimize" />
-                    <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
-                        <Border Width="22" Height="22" CornerRadius="5" Margin="0,0,10,0">
-                            <Border.Background>
-                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                    <GradientStop Color="#FF9900" Offset="0" />
-                                    <GradientStop Color="#FF6600" Offset="1" />
-                                </LinearGradientBrush>
-                            </Border.Background>
-                            <TextBlock Text="&#x26A1;" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White" />
-                        </Border>
-                        <TextBlock Text="AWS Credential Manager" VerticalAlignment="Center"
-                                   Foreground="White" FontWeight="SemiBold"
-                                   FontFamily="Segoe UI" FontSize="14" />
-                    </StackPanel>
+                    <TextBlock DockPanel.Dock="Left" Margin="16,0" Text="AWS Credential Manager" 
+                               VerticalAlignment="Center" Foreground="White" FontWeight="SemiBold" 
+                               FontFamily="Segoe UI" FontSize="14" />
                 </DockPanel>
             </Border>
 
-            <!-- Main Content -->
-            <Grid Grid.Row="1" Margin="18,16,18,12">
+            <Grid Grid.Row="1" Margin="20">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="272" />
-                    <ColumnDefinition Width="14" />
+                    <ColumnDefinition Width="320" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <!-- Left Panel -->
-                <Border Grid.Column="0" Background="White" CornerRadius="12" BorderThickness="1" BorderBrush="#E2E8F0">
-                    <Border.Effect>
-                        <DropShadowEffect BlurRadius="14" ShadowDepth="2" Color="#94A3B8" Opacity="0.1" />
-                    </Border.Effect>
-                    <StackPanel Margin="22,20,22,20">
-                        <TextBlock Text="Configuration" FontWeight="SemiBold" FontSize="15"
-                                   Foreground="#0F172A" FontFamily="Segoe UI"
-                                   Margin="0,0,0,18" />
-
-                        <TextBlock Text="ACCOUNT" FontSize="10.5" FontWeight="SemiBold"
-                                   Foreground="#94A3B8" FontFamily="Segoe UI" Margin="0,0,0,7" />
-                        <ComboBox Name="AccountComboBox" DisplayMemberPath="Name" Margin="0,0,0,24" />
-
-                        <Border Height="1" Background="#F1F5F9" Margin="0,0,0,20" />
-
-                        <TextBlock Text="ACTIONS" FontSize="10.5" FontWeight="SemiBold"
-                                   Foreground="#94A3B8" FontFamily="Segoe UI" Margin="0,0,0,12" />
-
-                        <Button Name="StartButton" Content="Start Process" Height="42" Margin="0,0,0,9"
-                                Background="{StaticResource Button.Success.Background}" IsDefault="True" />
-                        <Button Name="StopButton" Content="Stop Process" Height="42" Margin="0,0,0,9"
-                                Background="{StaticResource Button.Danger.Background}" IsEnabled="False" />
-                        <Button Name="RestartButton" Content="Restart Process" Height="42"
-                                Background="{StaticResource Button.Warning.Background}" />
+                <GroupBox Grid.Column="0" Header="Configuration" Margin="0,0,15,0">
+                    <StackPanel>
+                        <StackPanel Margin="0,0,0,20">
+                            <Label Content="Account Selection" FontWeight="SemiBold" FontSize="14" 
+                                   Margin="0,0,0,8" Foreground="#FF666666"/>
+                            <ComboBox Name="AccountComboBox" DisplayMemberPath="Name" />
+                        </StackPanel>
+                        
+                        <StackPanel Margin="0,30,0,0">
+                            <Button Name="StartButton" Content="Start Process" Height="45" Margin="0,0,0,12"
+                                    Background="{StaticResource Button.Success.Background}" 
+                                    Foreground="White" FontWeight="SemiBold" IsDefault="True" />
+                                    
+                            <Button Name="StopButton" Content="Stop Process" Height="45" Margin="0,0,0,12"
+                                    Background="{StaticResource Button.Danger.Background}" 
+                                    Foreground="White" FontWeight="SemiBold" IsEnabled="False" />
+                                    
+                            <Button Name="RestartButton" Content="Restart Process" Height="45"
+                                    Background="{StaticResource Button.Warning.Background}" 
+                                    Foreground="White" FontWeight="SemiBold" />
+                        </StackPanel>
                     </StackPanel>
-                </Border>
+                </GroupBox>
 
-                <!-- Right Panel: Activity Log -->
-                <Border Grid.Column="2" Background="White" CornerRadius="12" BorderThickness="1" BorderBrush="#E2E8F0">
-                    <Border.Effect>
-                        <DropShadowEffect BlurRadius="14" ShadowDepth="2" Color="#94A3B8" Opacity="0.1" />
-                    </Border.Effect>
+                <GroupBox Grid.Column="1" Header="Activity Log">
                     <Grid>
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
-
-                        <Border Grid.Row="0" BorderThickness="0,0,0,1" BorderBrush="#F1F5F9" Padding="20,15,20,13">
-                            <DockPanel>
-                                <TextBlock Text="Activity Log" FontWeight="SemiBold" FontSize="15"
-                                           Foreground="#0F172A" FontFamily="Segoe UI" VerticalAlignment="Center" />
-                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                                </StackPanel>
-                            </DockPanel>
-                        </Border>
-
-                        <Border Grid.Row="1" Background="#F8FAFC" CornerRadius="0,0,12,12">
-                            <ScrollViewer Name="LogScrollViewer" Padding="16,12" VerticalScrollBarVisibility="Auto">
-                                <TextBox Name="LogOutput" IsReadOnly="True" TextWrapping="Wrap"
+                        
+                        <Border CornerRadius="6" Background="#FFFAFAFA" BorderBrush="#FFE0E0E0" BorderThickness="1">
+                            <ScrollViewer Name="LogScrollViewer" Padding="15">
+                                <TextBox Name="LogOutput" IsReadOnly="True" TextWrapping="Wrap" 
                                          Background="Transparent" BorderThickness="0"
-                                         FontFamily="Cascadia Code, Consolas" FontSize="11.5"
-                                         Foreground="#334155"
+                                         FontFamily="Consolas" FontSize="11" 
                                          VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" />
                             </ScrollViewer>
                         </Border>
                     </Grid>
-                </Border>
+                </GroupBox>
             </Grid>
 
-            <!-- Status Bar -->
-            <Border Grid.Row="2" Background="White" CornerRadius="0,0,12,12"
-                    BorderThickness="0,1,0,0" BorderBrush="#E2E8F0">
-                <Grid Margin="24,10,24,14">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="6" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <ProgressBar Grid.Row="0" Name="ProgressBar" Value="0" />
-                    <TextBlock Grid.Row="2" Name="StatusText" Text="Ready"
-                               FontFamily="Segoe UI" FontSize="11.5"
-                               HorizontalAlignment="Center" Foreground="#64748B" FontWeight="Medium" />
-                </Grid>
-            </Border>
-
+                         <!-- Status Bar -->
+             <Border Grid.Row="2" Background="#FFF8F8F8" CornerRadius="0,0,8,8" BorderThickness="0,1,0,0" BorderBrush="#FFE0E0E0">
+                 <Grid Margin="20,16,20,16">
+                     <Grid.RowDefinitions>
+                         <RowDefinition Height="Auto" />
+                         <RowDefinition Height="Auto" />
+                     </Grid.RowDefinitions>
+                     
+                     <ProgressBar Grid.Row="0" Name="ProgressBar" Value="0" Margin="40,0,40,12" />
+                     <TextBlock Grid.Row="1" Name="StatusText" Text="Ready" FontFamily="Segoe UI" FontSize="12" 
+                                HorizontalAlignment="Center" Foreground="#FF666666" FontWeight="Medium" />
+                 </Grid>
+             </Border>
         </Grid>
     </Border>
 </Window>
