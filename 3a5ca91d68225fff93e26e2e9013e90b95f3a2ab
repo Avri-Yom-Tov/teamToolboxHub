@@ -1,0 +1,52 @@
+gitAi/orgRun.ps1
+  b14bf6f70189a514 10
+  d9cdc66c9b21ff9b 12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.10",
+  "base_commit_sha": "3a5ca91d68225fff93e26e2e9013e90b95f3a2ab",
+  "prompts": {
+    "b14bf6f70189a514": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "fe858f1d-aa84-4e9e-92b1-b1141f5e2b79",
+        "model": "copilot/claude-sonnet-4.5"
+      },
+      "human_author": "Avri ! <avraham.yom-tov@nice.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 1,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/0132141badbe90854953fb8292ed30620e7f718f55127378ad8b0d643e31ca19"
+    },
+    "d9cdc66c9b21ff9b": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "test-123",
+        "model": "claude-4-opus"
+      },
+      "human_author": "Avri ! <avraham.yom-tov@nice.com>",
+      "messages": [],
+      "total_additions": 10,
+      "total_deletions": 10,
+      "accepted_lines": 6,
+      "overriden_lines": 0
+    },
+    "fed7f3885c41dc97": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "eed76b08-2a61-49db-b3bf-6f217e4b5a70",
+        "model": "copilot/claude-sonnet-4.5"
+      },
+      "human_author": "Avri ! <avraham.yom-tov@nice.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 0,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/da96acd82e11c8cec03678ee0a1fff050a307c2830f27e3a9e511b6fda19c383"
+    }
+  }
+}
