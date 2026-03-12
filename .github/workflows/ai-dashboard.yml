@@ -193,8 +193,11 @@ jobs:
               .split-labels{{display:flex;justify-content:space-between;margin-top:.5rem;font-size:.72rem;color:var(--sub);font-family:'IBM Plex Mono',monospace}}
               .accept-wrap{{display:flex;align-items:center;gap:1.5rem;margin-top:.5rem}}
               .accept-pct{{font-size:2.8rem;font-weight:700;font-family:'IBM Plex Mono',monospace;color:var(--green);text-shadow:0 0 30px rgba(52,211,153,.3)}}
-              .accept-detail{{font-size:.78rem;color:var(--sub);line-height:1.9}}
-              .accept-detail strong{{color:var(--text)}}
+              .accept-detail{{display:flex;flex-direction:column;gap:.5rem}}
+              .accept-stat{{display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding:.35rem .65rem;background:var(--bg);border:1px solid var(--border);border-radius:6px;transition:border-color .2s ease}}
+              .accept-stat:hover{{border-color:var(--muted)}}
+              .accept-stat-label{{font-size:.68rem;font-family:'IBM Plex Mono',monospace;letter-spacing:.06em;color:var(--sub);text-transform:uppercase}}
+              .accept-stat-val{{font-size:.85rem;font-weight:700;font-family:'IBM Plex Mono',monospace;color:var(--text)}}
               .agent{{font-size:1.6rem;font-weight:600;display:flex;align-items:center;gap:.6rem;margin-top:.5rem}}
               .dot{{width:10px;height:10px;border-radius:50%;background:var(--blue);flex-shrink:0}}
               .model-row{{display:flex;align-items:center;gap:.75rem;margin-bottom:.6rem}}
@@ -249,9 +252,9 @@ jobs:
                 <div class="accept-wrap">
                   <div class="accept-pct">{accept_rate}%</div>
                   <div class="accept-detail">
-                    <div>Generated: <strong>{gen}</strong></div>
-                    <div>Committed: <strong>{ai}</strong></div>
-                    <div>Accepted as-is: <strong>{accepted}</strong></div>
+                    <div class="accept-stat"><span class="accept-stat-label">Generated</span><span class="accept-stat-val c-blue">{gen}</span></div>
+                    <div class="accept-stat"><span class="accept-stat-label">Committed</span><span class="accept-stat-val c-green">{ai}</span></div>
+                    <div class="accept-stat"><span class="accept-stat-label">Accepted</span><span class="accept-stat-val c-orange">{accepted}</span></div>
                   </div>
                 </div>
               </div>
@@ -301,7 +304,7 @@ jobs:
               </div>
             </div>
 
-            <div class="footer">powered by git-ai · nice-cxone · data stored exclusively in git notes</div>
+            <div class="footer">powered by git-ai · nice-cxone </div>
           </body>
           </html>"""
 
