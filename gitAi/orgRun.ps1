@@ -7,7 +7,9 @@ irm https://raw.githubusercontent.com/git-ai-project/git-ai/main/install.ps1 | i
 
 
 # ── Configuration ──
+# Run git-ai in quiet mode - minimizes console output, only shows errors and critical information
 git-ai config set quiet true
+# Disable telemetry data collection
 git-ai config set telemetry_oss off
 git-ai config set allow_repositories "https://github.com/nice-cxone/*" --add
 
