@@ -75,6 +75,8 @@ Read when the user needs help with:
 - The `/ask` skill and AGENTS.md integration
 - Excluding sensitive repos or prompts from tracking
 - `.git-ai-ignore` per-repo setup
+- Windows performance: Defender exclusions, PATH resolution, BeyondTrust/restricted admin, Git Bash integration
+- Windows-specific troubleshooting during rollout
 
 ### `references/agent-integrations.md`
 Read when the user needs help with:
@@ -201,29 +203,33 @@ git-ai blame <file> # See AI attribution per line
 - macOS 14.0+, Ubuntu 18+, Windows 10+
 - Git 2.23+
 
-## Important notes for the organization's use case
+## Licensing
 
-The organization wants to use **only the free open-source CLI** without the paid Teams platform.
-This means:
-- All AI authorship data is stored as git notes in the organization's own GitHub repos
-- No external dashboard — use CLI commands (blame, stats, diff) to query data locally
-- CI workflows (GitHub Actions) can handle squash/rebase merge attribution
-- MDM deployment distributes the binary across developer machines
-- Enterprise config.json controls repository scope, update behavior, and telemetry
-- No prompt storage in the cloud — prompts stay local or in git notes only
+Git AI is licensed under **Apache 2.0** — full commercial and organizational use is permitted.
+No per-user fees, no usage limits, no obligation to share code back.
 
-## Dashboard / Analytics overview
+## Organization implementation plan
 
-**Free tier (CLI-based):**
-- `git-ai status` — real-time terminal progress bar (human vs AI %), acceptance rate, wait time, and chronological checkpoint list with agent/model per change
-- `git-ai stats` — aggregate AI vs human stats per commit or range, JSON output, per-tool/model breakdown
-- No web UI — all data viewed via terminal commands
+The organization uses **only the free open-source CLI**. All data stays in-house.
 
-**Teams/Enterprise tier (paid, web UI):**
-- AI authorship breakdown per PR
-- AI code % tracked through entire SDLC (commit → review → production)
-- Agent/model accepted-rate comparison
-- AI-Code Halflife (code durability)
-- Token usage and cost tracking
-- Team dashboards, prompt traces, cross-team agent comparison
-- Enterprise adds: self-hosted, data warehouse export, automatic squash/rebase via SCM bot
+**Architecture:**
+- git-ai CLI installed on developer machines via MDM
+- AI authorship data stored as git notes in the organization's GitHub repos
+- GitHub Actions workflow (`pr-ai-comment.yml`) runs on every PR, posts AI stats as a PR comment
+- PR comments include a hidden `AGENT_EXPERIENCE_RECORD` JSON block
+- Power BI connects to GitHub API, pulls PR comment data, and builds org-wide dashboards
+- No external services, no paid tiers, no third-party data sharing
+
+**PR comment provides (per PR):**
+- AI vs Human code %, lines added, acceptance rate
+- Agent/model breakdown, AI wait time, wasted LOC
+- Structured JSON matching the AgentExperienceRecord schema
+
+**Fields Power BI enriches from other sources:**
+- SP (Story Points) — from Jira
+- cost — from token usage tracking
+- successful_tests — from CI pipeline
+- human_feedback / quality_score — manual input
+
+**AI Code Durability** (how long AI code survives) can be built in-house using
+`git-ai blame` comparisons over time — the raw data is in git notes.

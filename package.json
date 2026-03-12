@@ -1,0 +1,8 @@
+{
+  "name": "team-toolbox-hub",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "sync": "git add . && git commit -m \"from terminal\" && git push"
+  }
+}
