@@ -1,0 +1,24 @@
+.github/workflows/ai-dashboard.yml
+  27acfda3155d1899 189
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.11",
+  "base_commit_sha": "bdef50bb191c8c4c2be8ed0135e1ec1d4904d90d",
+  "prompts": {
+    "27acfda3155d1899": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "82664fad-c6eb-4dd6-92fb-272f1249774a",
+        "model": "claude-4.6-opus-high-thinking"
+      },
+      "human_author": "Avri ! <avraham.yom-tov@nice.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 1,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/8910339ce2ea1184ed6b716e0d0cb857c508aa05aab8512a90c68f87e0d36c47"
+    }
+  }
+}
