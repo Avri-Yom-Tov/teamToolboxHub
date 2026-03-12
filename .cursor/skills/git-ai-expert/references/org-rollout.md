@@ -295,11 +295,40 @@ git-ai config      # should show org config
 
 ---
 
-## CI Workflows (Squash/Rebase Merge Attribution)
+## Squash/Rebase Merge — Why Notes Break and How to Fix
 
-GitHub/GitLab/Bitbucket web UIs perform squash and rebase merges server-side where git-ai isn't running. CI scripts reconstruct authorship after these merges.
+### The problem
 
-> Git AI has a Cloud + Self-Hosted SCM App under development that will do this automatically. For now, use CI scripts.
+Git notes are linked to a commit by its SHA. When GitHub performs a squash or rebase merge via the web UI, it creates **new commits with new SHAs**. The original commits (and their notes) are no longer reachable from the target branch.
+
+```
+PR branch:   A ← B ← C     (each has a git-ai note)
+                  ↓ squash merge on GitHub
+main:        ...← S          (new SHA, no note)
+```
+
+Result: all AI authorship data for that PR is lost. The code looks 100% human-written.
+
+### When does this happen?
+
+| Merge strategy | Notes survive? |
+|----------------|---------------|
+| **Create a merge commit** | Yes — original commits stay in history |
+| **Squash and merge** | No — single new commit replaces all |
+| **Rebase and merge** | No — new commits with new SHAs |
+
+The merge strategy is chosen per-PR via the dropdown next to the merge button. It can be restricted per-repo in **Settings > General > Pull Requests**.
+
+### The fix: CI reconstructs notes after merge
+
+`git-ai squash-authorship` reads the notes from the original commits, merges them, and attaches the combined note to the new commit:
+
+```
+Before:  S → (no note)
+After:   S → note: {ai_additions: 65, human_additions: 10, tool: "cursor/claude-4.5-opus"...}
+```
+
+CI runs automatically on every merged PR — no manual intervention needed.
 
 ### GitHub Actions
 
@@ -501,26 +530,35 @@ export PATH="$HOME/.git-ai/bin:$PATH"
 
 ## Free vs Paid Comparison
 
-| Feature | Free (OSS) | Teams | Enterprise |
-|---------|-----------|-------|------------|
-| AI Blame | Yes | Yes | Yes |
-| AI Stats per commit | Yes | Yes | Yes |
-| Local prompt storage | Yes | Yes | Yes |
-| Git notes attribution | Yes | Yes | Yes |
-| Personal dashboard | Yes | Yes | Yes |
-| Prompt storage in notes | Yes | Yes | Yes |
-| /ask skill (cross-agent) | Yes | Yes | Yes |
-| Team prompt store | No | Yes | Yes |
-| PR-level metrics | No | Yes | Yes |
-| Team dashboards | No | Yes | Yes |
-| AI durability / rework | No | Yes | Yes |
-| Cost tracking | No | Yes | Yes |
-| Code durability evals | No | Yes | Yes |
-| Data warehouse export | No | No | Yes |
-| Self-hosted | N/A | No | Yes |
-| Web UI squash/rebase fix | CI scripts (OSS) | Automatic | Automatic |
+### What we have (free tier + our CI)
 
-**Bottom line**: The free tier provides full commit-level AI attribution, blame, stats, note syncing, personal dashboard, and the /ask skill. The paid tiers add PR-level analytics, team dashboards, cloud prompt storage, and code durability tracking.
+| Feature | Free CLI | Our DIY (CI/GitHub Pages) | Teams (paid) | Enterprise (paid) |
+|---------|----------|--------------------------|--------------|-------------------|
+| AI Blame | ✅ | — | ✅ | ✅ |
+| AI Stats per commit | ✅ | — | ✅ | ✅ |
+| Git notes attribution | ✅ | — | ✅ | ✅ |
+| /ask skill (cross-agent) | ✅ | — | ✅ | ✅ |
+| Personal dashboard (CLI) | ✅ | — | ✅ | ✅ |
+| Prompt storage in notes | ✅ | — | ✅ | ✅ |
+| Web dashboard | ❌ | ✅ `ai-dashboard.yml` | ✅ | ✅ |
+| PR AI comment | ❌ | ✅ `pr-ai-comment.yml` | ✅ | ✅ |
+| Squash/rebase note fix | ❌ | ✅ CI workflow per repo | ✅ auto (SCM app) | ✅ auto (SCM app) |
+| Per-developer breakdown | ❌ | Buildable (stats + author filter) | ✅ | ✅ |
+| AI-Code Halflife | ❌ | Buildable (blame snapshots over time) | ✅ | ✅ |
+| Prompt traces in dashboard | ❌ | Buildable (show-prompt + UI) | ✅ | ✅ |
+| Token usage / cost tracking | ❌ | **Not possible** — data not in notes | ✅ | ✅ |
+| SDLC tracking (commit → prod) | ❌ | **Not possible** — needs APM integration | ✅ | ✅ |
+| Code durability evals (A/B) | ❌ | **Not possible** — needs statistical pipeline | ✅ | ✅ |
+| Data warehouse export | ❌ | ❌ | ❌ | ✅ |
+| Self-hosted deployment | — | — | ❌ | ✅ |
+
+### What we cannot build
+
+| Feature | Why |
+|---------|-----|
+| **Token usage / cost** | The CLI does not capture token counts or API costs. This data comes from LLM provider billing, which the paid platform intercepts. |
+| **SDLC-wide tracking** | Tracking AI code from commit through review, deploy, to production incidents requires integration with APM, CI/CD, and incident management systems. |
+| **Code durability evals** | A/B testing the impact of new MCPs, skills, or agent configs on code longevity requires a statistical pipeline across many repos and time periods. |
 
 ---
 
