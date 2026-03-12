@@ -28,7 +28,7 @@ jobs:
         run: git fetch origin refs/notes/*:refs/notes/* || echo "No notes yet"
 
       - name: Fetch base branch
-        run: git fetch origin ${{ github.event.pull_request.base.ref }} --depth=0
+        run: git fetch origin ${{ github.event.pull_request.base.ref }}
 
       - name: Compute PR stats
         run: |
@@ -151,7 +151,8 @@ jobs:
                   bars += f"| {lbl} | {bar} | {ln} |\n"
 
           lines = []
-          lines.append('## AI Authorship Report')
+          lines.append(f'## AI Authorship Report — PR #{pr_number}')
+          lines.append(f'> **{pr_title}** by `{pr_author}`')
           lines.append('')
           lines.append('| Metric | Value |')
           lines.append('|--------|-------|')
