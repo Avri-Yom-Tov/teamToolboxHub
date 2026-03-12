@@ -20,9 +20,22 @@ git-ai config set allow_repositories "https://github.com/nice-cxone/*" --add
 
 
 
-# ── Optional ──
-# git-ai config set prompt_storage notes        # Store prompts in git notes (not just locally)
+# ── Optional Configuration ──
+# Uncomment any of the following commands to enable additional features or customizations
+
+# Store AI prompts in git notes for team-wide sharing
+# By default, prompts are stored locally only. Enabling this syncs them across the team.
+# Useful for: collaborative workflows, sharing AI-generated commit messages across team members
+# git-ai config set prompt_storage notes
+
+# Disable automatic updates of Git AI
+# Prevents Git AI from automatically updating itself to newer versions
+# Useful for: maintaining version consistency across team, controlled update schedules
 # git-ai config set disable_auto_updates true
+
+# Disable version compatibility checks
+# Stops Git AI from checking if you're using the latest version
+# Useful for: air-gapped environments, reducing network calls
 # git-ai config set disable_version_checks true
 
 
