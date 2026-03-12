@@ -3,8 +3,8 @@
 
 # ── Install Git AI ──
 # irm http://usegitai.com/install.ps1 | iex
-irm https://raw.githubusercontent.com/git-ai-project/git-ai/main/install.ps1 | iex
-
+# irm https://raw.githubusercontent.com/git-ai-project/git-ai/main/install.ps1 | iex
+# powershell -NoProfile -ExecutionPolicy Bypass -Command "irm http://usegitai.com/install.ps1 | iex"
 
 # ── Configuration ──
 # Run git-ai in quiet mode - minimizes console output, only shows errors and critical information
