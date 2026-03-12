@@ -30,9 +30,9 @@
     .split-human{background:linear-gradient(90deg,var(--blue),#5fb3f3);border-radius:5px 0 0 5px}
     .split-ai{background:linear-gradient(90deg,#fb8c3c,var(--accent));border-radius:0 5px 5px 0}
     .split-labels{display:flex;justify-content:space-between;margin-top:.5rem;font-size:.72rem;color:var(--sub);font-family:'IBM Plex Mono',monospace}
-    .accept-wrap{display:flex;align-items:center;gap:1.5rem;margin-top:.5rem}
+    .accept-wrap{display:flex;align-items:center;gap:1.5rem;margin-top:.5rem;flex-wrap:wrap}
     .accept-pct{font-size:2.8rem;font-weight:700;font-family:'IBM Plex Mono',monospace;color:var(--green);text-shadow:0 0 30px rgba(52,211,153,.3)}
-    .accept-detail{display:flex;flex-direction:column;gap:.5rem}
+    .accept-detail{display:flex;flex-direction:column;gap:.5rem;flex:1;min-width:0}
     .accept-stat{display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding:.35rem .65rem;background:var(--bg);border:1px solid var(--border);border-radius:6px;transition:border-color .2s ease}
     .accept-stat:hover{border-color:var(--muted)}
     .accept-stat-label{font-size:.68rem;font-family:'IBM Plex Mono',monospace;letter-spacing:.06em;color:var(--sub);text-transform:uppercase}
@@ -70,7 +70,7 @@
   <header>
     <h1>AI Authorship Dashboard</h1>
     <p>Cross-agent statistics and session analysis to improve your AI-aided development.</p>
-    <div class="ts">Updated: 2026-03-12 21:48 UTC</div>
+    <div class="ts">Updated: 2026-03-12 21:52 UTC</div>
   </header>
 
   <div class="grid-top">
@@ -180,24 +180,24 @@
       <div class="tl-count">1</div>
     </div><div class="tl-col">
       <div class="tl-bar-wrap">
-        <div class="tl-bar" style="height:40%" title="12 commits"></div>
+        <div class="tl-bar" style="height:39%" title="12 commits"></div>
       </div>
       <div class="tl-label">03-11</div>
       <div class="tl-count">12</div>
     </div><div class="tl-col">
       <div class="tl-bar-wrap">
-        <div class="tl-bar" style="height:100%" title="30 commits"></div>
+        <div class="tl-bar" style="height:100%" title="31 commits"></div>
       </div>
       <div class="tl-label">03-12</div>
-      <div class="tl-count">30</div>
+      <div class="tl-count">31</div>
     </div></div>
     </div>
     <div class="card">
       <div class="lbl">CONTRIBUTORS WITH AUTHORSHIP DATA</div>
-      <div class="contrib-wrap"><div class="contrib-tag">avriFromHome</div><div class="contrib-tag">Avri !</div></div>
+      <div class="contrib-wrap"><div class="contrib-tag">Avri !</div><div class="contrib-tag">avriFromHome</div></div>
       <div class="divider"></div>
       <div class="meta">
-        <span>Total commits: <strong>42</strong></span>
+        <span>Total commits: <strong>43</strong></span>
         <span>With attribution: <strong style="color:var(--green)">19</strong></span>
         <span>Human lines: <strong>2575</strong></span>
         <span>AI lines: <strong style="color:var(--accent)">113</strong></span>
