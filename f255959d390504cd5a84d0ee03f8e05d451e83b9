@@ -1,0 +1,40 @@
+.github/workflows/ai-dashboard.yml
+  e2dac104b79eed37 76,194-196,239,244,257-260,262-264,268,275,280,285,297
+.cursor/skills/git-ai-expert/references/org-rollout.md
+  7b5525608fcb47eb 298,300,302-331,533,535-561
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.11",
+  "base_commit_sha": "f255959d390504cd5a84d0ee03f8e05d451e83b9",
+  "prompts": {
+    "7b5525608fcb47eb": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "c5535f17-9432-455f-ad35-21897b3db944",
+        "model": "claude-4.6-opus-high-thinking"
+      },
+      "human_author": "Avri ! <avraham.yom-tov@nice.com>",
+      "messages": [],
+      "total_additions": 60,
+      "total_deletions": 22,
+      "accepted_lines": 60,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/00b94f55d996bb151c1aec412082c89d77b39d1b7230ac630126b318773c3636"
+    },
+    "e2dac104b79eed37": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "40a7a34f-2e3b-43e4-9586-04acdb7a3772",
+        "model": "claude-4.6-opus-high-thinking"
+      },
+      "human_author": "Avri ! <avraham.yom-tov@nice.com>",
+      "messages": [],
+      "total_additions": 20,
+      "total_deletions": 14,
+      "accepted_lines": 18,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/40436ae250d9d0ae9b6898f889cd22bfe369932edd4d9ac02c199f35c34fcbb2"
+    }
+  }
+}
