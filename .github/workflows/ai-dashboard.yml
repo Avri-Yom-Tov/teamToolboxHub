@@ -238,7 +238,6 @@ jobs:
             </header>
 
             <div class="grid-top">
-              <div class="period-badge">Last 7 days</div>
               <div class="card">
                 <div class="lbl">AI CODE</div>
                 <div class="big">{ai_pct}%</div>
@@ -308,8 +307,7 @@ jobs:
                 </div>
               </div>
             </div>
-
-            <div class="footer">powered by git-ai · nice-cxone · updated at: {updated_at}</div>
+            <div class="footer">Last 7 days · nice-cxone · updated : {updated_at}</div>
 
           </body>
           </html>"""
