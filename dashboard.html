@@ -29,10 +29,13 @@
     .split-bar{display:flex;height:10px;border-radius:5px;overflow:hidden;margin-top:1rem;gap:2px;box-shadow:inset 0 2px 4px rgba(0,0,0,.3)}
     .split-human{background:linear-gradient(90deg,var(--blue),#5fb3f3);border-radius:5px 0 0 5px}
     .split-ai{background:linear-gradient(90deg,#fb8c3c,var(--accent));border-radius:0 5px 5px 0}
+    .split-accept{background:linear-gradient(90deg,var(--green),#4ae3b5);border-radius:5px 0 0 5px}
+    .split-reject{background:linear-gradient(90deg,#555,var(--muted));border-radius:0 5px 5px 0}
+    .period-badge{display:inline-block;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:.3rem .9rem;font-size:.75rem;font-family:'IBM Plex Mono',monospace;color:var(--sub);margin-top:.75rem;letter-spacing:.05em}
     .split-labels{display:flex;justify-content:space-between;margin-top:.5rem;font-size:.72rem;color:var(--sub);font-family:'IBM Plex Mono',monospace}
-    .accept-wrap{display:flex;align-items:center;gap:1.5rem;margin-top:.5rem;flex-wrap:wrap}
+    .accept-wrap{display:flex;align-items:center;gap:1.5rem;margin-top:.5rem}
     .accept-pct{font-size:2.8rem;font-weight:700;font-family:'IBM Plex Mono',monospace;color:var(--green);text-shadow:0 0 30px rgba(52,211,153,.3)}
-    .accept-detail{display:flex;flex-direction:column;gap:.5rem;flex:1;min-width:0}
+    .accept-detail{display:flex;flex-direction:column;gap:.5rem}
     .accept-stat{display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding:.35rem .65rem;background:var(--bg);border:1px solid var(--border);border-radius:6px;transition:border-color .2s ease}
     .accept-stat:hover{border-color:var(--muted)}
     .accept-stat-label{font-size:.68rem;font-family:'IBM Plex Mono',monospace;letter-spacing:.06em;color:var(--sub);text-transform:uppercase}
@@ -70,47 +73,49 @@
   <header>
     <h1>AI Authorship Dashboard</h1>
     <p>Cross-agent statistics and session analysis to improve your AI-aided development.</p>
-    <div class="ts">Updated: 2026-03-12 21:52 UTC</div>
+    <div class="ts">Updated: 2026-03-12 22:08 UTC</div>
+    <div class="period-badge">Last 7 days</div>
   </header>
 
   <div class="grid-top">
     <div class="card">
-      <div class="lbl">AI CODE (last 7 days)</div>
-      <div class="big">4.2%</div>
+      <div class="lbl">AI CODE</div>
+      <div class="big">7.0%</div>
       <div class="split-bar">
-        <div class="split-human" style="flex:95.8"></div>
-        <div class="split-ai"    style="flex:4.2"></div>
+        <div class="split-human" style="flex:93.0"></div>
+        <div class="split-ai"    style="flex:7.0"></div>
       </div>
       <div class="split-labels">
-        <span>&#9632; Human 95.8%</span>
-        <span>AI 4.2% &#9632;</span>
+        <span>&#9632; Human 93.0%</span>
+        <span>AI 7.0% &#9632;</span>
       </div>
     </div>
     <div class="card">
-      <div class="lbl">ACCEPTANCE RATE (last 7 days)</div>
-      <div class="accept-wrap">
-        <div class="accept-pct">10.5%</div>
-        <div class="accept-detail">
-          <div class="accept-stat"><span class="accept-stat-label">Generated</span><span class="accept-stat-val c-blue">1076</span></div>
-          <div class="accept-stat"><span class="accept-stat-label">Committed</span><span class="accept-stat-val c-green">113</span></div>
-          <div class="accept-stat"><span class="accept-stat-label">Accepted</span><span class="accept-stat-val c-orange">113</span></div>
-        </div>
+      <div class="lbl">ACCEPTANCE RATE</div>
+      <div class="big" style="color:var(--green);text-shadow:0 0 40px rgba(52,211,153,.3)">16.5%</div>
+      <div class="split-bar">
+        <div class="split-accept" style="flex:16.5"></div>
+        <div class="split-reject" style="flex:83.5"></div>
+      </div>
+      <div class="split-labels">
+        <span>&#9632; Accepted 16.5%</span>
+        <span>Rejected 83.5% &#9632;</span>
       </div>
     </div>
     <div class="card">
-      <div class="lbl">TOP MODELS (last 7 days)</div>
+      <div class="lbl">TOP MODELS</div>
       <div class="model-row">
-      <span class="model-name">Cursor</span>
+      <span class="model-name">Cursor / claude-4.6-opus-high-…</span>
       <div class="model-bar-wrap"><div class="model-bar" style="width:100%;background:#4fa3e3"></div></div>
+      <span class="model-count">81</span>
+    </div><div class="model-row">
+      <span class="model-name">Cursor</span>
+      <div class="model-bar-wrap"><div class="model-bar" style="width:90%;background:#a78bfa"></div></div>
       <span class="model-count">73</span>
     </div><div class="model-row">
       <span class="model-name">GitHub Copilot</span>
-      <div class="model-bar-wrap"><div class="model-bar" style="width:48%;background:#a78bfa"></div></div>
+      <div class="model-bar-wrap"><div class="model-bar" style="width:43%;background:#34d399"></div></div>
       <span class="model-count">35</span>
-    </div><div class="model-row">
-      <span class="model-name">Cursor / claude-4.6-opus-high-…</span>
-      <div class="model-bar-wrap"><div class="model-bar" style="width:4%;background:#34d399"></div></div>
-      <span class="model-count">3</span>
     </div><div class="model-row">
       <span class="model-name">Cursor / claude-4-opus</span>
       <div class="model-bar-wrap"><div class="model-bar" style="width:1%;background:#fb923c"></div></div>
@@ -125,21 +130,21 @@
 
   <div class="grid-mid">
     <div class="card">
-      <div class="lbl">TOP AGENT (last 7 days)</div>
+      <div class="lbl">TOP AGENT</div>
       <div class="agent"><span class="dot"></span>Cursor</div>
-      <div style="margin-top:1rem;color:var(--sub);font-size:.8rem">73 AI lines committed</div>
+      <div style="margin-top:1rem;color:var(--sub);font-size:.8rem">81 AI lines committed</div>
     </div>
     <div class="card">
-      <div class="lbl">AI WAIT TIME (last 7 days)</div>
+      <div class="lbl">AI WAIT TIME</div>
       <div class="stat">14s</div>
       <div class="stat-sub">Time waiting for AI responses</div>
     </div>
     <div class="card">
-      <div class="lbl">AI OUTPUT (last 7 days)</div>
+      <div class="lbl">AI OUTPUT</div>
       <div class="out-grid">
-        <div class="out-item"><label>GENERATED</label><div class="out-val c-blue">1076</div></div>
-        <div class="out-item"><label>COMMITTED</label><div class="out-val c-green">113</div></div>
-        <div class="out-item"><label>ACCEPTED</label><div class="out-val c-orange">113</div></div>
+        <div class="out-item"><label>GENERATED</label><div class="out-val c-blue">1156</div></div>
+        <div class="out-item"><label>COMMITTED</label><div class="out-val c-green">191</div></div>
+        <div class="out-item"><label>ACCEPTED</label><div class="out-val c-orange">191</div></div>
         <div class="out-item"><label>AGENTS</label><div class="out-val c-white">2</div></div>
       </div>
     </div>
@@ -147,7 +152,7 @@
 
   <div class="grid-bot">
     <div class="card">
-      <div class="lbl">COMMITS PER DAY (last 7 days)</div>
+      <div class="lbl">COMMITS PER DAY</div>
       <div class="timeline"><div class="tl-col">
       <div class="tl-bar-wrap">
         <div class="tl-bar" style="height:4%" title="0 commits"></div>
@@ -194,13 +199,13 @@
     </div>
     <div class="card">
       <div class="lbl">CONTRIBUTORS WITH AUTHORSHIP DATA</div>
-      <div class="contrib-wrap"><div class="contrib-tag">Avri !</div><div class="contrib-tag">avriFromHome</div></div>
+      <div class="contrib-wrap"><div class="contrib-tag">avriFromHome</div><div class="contrib-tag">Avri !</div></div>
       <div class="divider"></div>
       <div class="meta">
-        <span>Total commits: <strong>43</strong></span>
-        <span>With attribution: <strong style="color:var(--green)">19</strong></span>
-        <span>Human lines: <strong>2575</strong></span>
-        <span>AI lines: <strong style="color:var(--accent)">113</strong></span>
+        <span>Total commits: <strong>44</strong></span>
+        <span>With attribution: <strong style="color:var(--green)">20</strong></span>
+        <span>Human lines: <strong>2541</strong></span>
+        <span>AI lines: <strong style="color:var(--accent)">191</strong></span>
       </div>
     </div>
   </div>
