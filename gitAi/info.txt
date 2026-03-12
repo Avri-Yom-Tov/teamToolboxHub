@@ -3,6 +3,7 @@
 
 
 git log --show-notes=ai 
+git log --show-notes=ai --oneline
 git fetch origin refs/notes/*:refs/notes/*
 
 
