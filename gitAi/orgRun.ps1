@@ -2,7 +2,9 @@
 
 
 
+
 $gitAiBin = "$env:USERPROFILE\.git-ai\bin"
+
 $candidates = @(
     (Get-Command git -ErrorAction SilentlyContinue -All |
         Where-Object { $_.Source -notlike "$gitAiBin*" } |
@@ -12,10 +14,14 @@ $candidates = @(
     "$env:LOCALAPPDATA\Programs\Git\cmd\git.exe"
 ) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
 
+
+
 if (-not $candidates) {
-    Write-Error "Could not find git.exe. Please install Git first."
+    Write-Error "Could not find git.exe. Please install Git first !"
     exit 1
 }
+
+
 $realGit = (Resolve-Path $candidates).Path
 Write-Host "Detected git at: $realGit"
 
@@ -42,6 +48,3 @@ $escapedGitPath = $realGit -replace '\\', '\\\\'
 
 # 4. קונפיג git גלובלי - דחיפת notes אוטומטית
 git config --global --add remote.origin.push 'refs/notes/*'
-
-# 5. מתקין hooks לAgent
-git-ai install-hooks
