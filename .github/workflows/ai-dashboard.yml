@@ -186,7 +186,7 @@ jobs:
               .card{{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.5rem;position:relative;overflow:hidden;transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}}
               .card:hover{{transform:translateY(-2px);border-color:var(--muted);box-shadow:0 8px 24px rgba(0,0,0,.3)}}
               .card::before{{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(249,115,22,.03),transparent 60%);pointer-events:none}}
-              .lbl{{font-size:.68rem;font-family:'IBM Plex Mono',monospace;letter-spacing:.12em;color:var(--sub);text-transform:uppercase;margin-bottom:1.2rem;font-weight:700;text-align:center}}
+              .lbl{{font-size:0.75rem;font-family:'IBM Plex Mono',monospace;letter-spacing:.10em;color:#666693;text-transform:uppercase;margin-bottom:1.2rem;font-weight:bolder;text-align:center}}
               .big{{font-size:4rem;font-weight:700;color:var(--accent);line-height:1;font-family:'IBM Plex Mono',monospace;text-align:center;text-shadow:0 0 40px rgba(249,115,22,.3)}}
               .split-bar{{display:flex;height:10px;border-radius:5px;overflow:hidden;margin-top:1rem;gap:2px;box-shadow:inset 0 2px 4px rgba(0,0,0,.3)}}
               .split-human{{background:linear-gradient(90deg,var(--blue),#5fb3f3);border-radius:5px 0 0 5px}}
@@ -227,7 +227,7 @@ jobs:
               .divider{{height:1px;background:var(--border);margin:1rem 0}}
               .meta{{display:flex;gap:2rem;font-size:.82rem;color:var(--sub);flex-wrap:wrap}}
               .meta strong{{color:var(--text)}}
-              .footer{{margin-top:3rem;padding-top:2rem;border-top:1px solid var(--border);font-size:.73rem;color:var(--muted);font-family:'IBM Plex Mono',monospace;text-align:center}}
+              .footer{{margin-top:1rem;padding-top:2rem;border-top:1px solid var(--border);font-size:.73rem;color:var(--muted);font-family:'IBM Plex Mono',monospace;text-align:center}}
               @media(max-width:900px){{.grid-top,.grid-mid,.grid-bot{{grid-template-columns:1fr}}}}
             </style>
           </head>
@@ -307,7 +307,7 @@ jobs:
                 </div>
               </div>
             </div>
-            <div class="footer">Last 7 days · nice-cxone · updated : {updated_at}</div>
+            <div class="footer">last 7 days · nice-cxone · updated : {updated_at}</div>
 
           </body>
           </html>"""
