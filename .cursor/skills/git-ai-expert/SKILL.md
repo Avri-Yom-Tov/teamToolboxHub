@@ -102,12 +102,42 @@ curl -sSL https://usegitai.com/install.sh | bash
 powershell -NoProfile -ExecutionPolicy Bypass -Command "irm http://usegitai.com/install.ps1 | iex"
 ```
 
-After install, configure agent hooks:
+🎊 That's it! **No per-repo setup.** The install script automatically:
+1. Downloads the correct binary for the platform
+2. Creates symlinks/shims so `git` calls route through git-ai
+3. Runs `git-ai install-hooks` to set up IDE/agent hooks (Cursor hooks.json, Claude Code settings.json, etc.)
+4. Configures PATH so git-ai takes precedence over standard git
+5. On Windows: also configures Git Bash shell profiles if Git Bash is detected
+
+**`git-ai install-hooks` runs automatically during installation.** Users only need to run it manually if:
+- The automatic setup failed (installer prints a warning in that case)
+- They want to re-configure hooks after updating agents or IDEs
+- They installed a new coding agent after git-ai was already installed
+
+The install script also installs the **VS Code / Cursor extension** automatically. The extension provides:
+- **AI Blame gutter decorations** in the editor (modes: All, Line, Off)
+- **Experimental AI tab tracking** (`gitai.experiments.aiTabTracking`) for tracking tab-completion insertions
+- **Debug logging** (`gitai.enableCheckpointLogging`) to see checkpoint toast messages
+- Works in VS Code, Cursor, Windsurf, and Antigravity
+- If auto-install didn't work, install manually from VS Code Marketplace or Open VSX by searching "git-ai"
+- The extension is NOT required for core agent tracking (Cursor agent mode, Claude Code, etc.) — that works via CLI hooks alone
+- The extension IS needed for tab-completion tracking (experimental) and in-editor AI blame visualization
+
+On **Windows (non-WSL)** specifically, the install script also:
+- Creates a `git-og.cmd` shim to access the original git binary directly
+- Attempts to update both User and Machine PATH (Machine requires admin/elevated PowerShell)
+- If Machine PATH update fails (e.g. BeyondTrust restrictions), prints instructions for manual PATH editing
+- Configures Git Bash `.bashrc` if Git Bash is detected
+
+**Uninstalling git-ai:**
 ```bash
-git-ai install-hooks
+git-ai uninstall-hooks          # Remove agent hooks
+rm -rf ~/.git-ai                # Remove binary (Linux/macOS)
+# Windows: rmdir /s /q %USERPROFILE%\.git-ai
+# Optionally remove PATH entry from shell config
 ```
 
-Verify:
+Verify installation:
 ```bash
 which git          # Should show ~/.git-ai/bin/git
 git-ai status      # Should show checkpoint history
@@ -127,7 +157,10 @@ git-ai blame <file> # See AI attribution per line
 | `git-ai search [options]` | Search AI prompt sessions by commit, file, pattern, or author |
 | `git-ai continue [options]` | Restore AI session context for continuation |
 | `git-ai config` | View/set configuration |
-| `git-ai install-hooks` | Configure agent hooks (Cursor, Claude Code, Copilot, etc.) |
+| `git-ai install-hooks` | Configure agent hooks (runs automatically during install) |
+| `git-ai uninstall-hooks` | Remove agent hooks (for uninstalling git-ai) |
+| `git-ai git-hooks ensure` | (Beta) Install/heal repo-local git-ai hooks for current repo |
+| `git-ai git-hooks remove` | (Beta) Remove repo-local git-ai hooks for current repo |
 | `git-ai checkpoint` | Mark code changes (used by agents, not typically by users) |
 
 ## How it works (summary)
@@ -153,7 +186,7 @@ git-ai blame <file> # See AI attribution per line
 | Windsurf | 🔄 | 🔄 | In-progress |
 | Augment Code | 🔄 | 🔄 | In-progress |
 | AWS Kiro | 🔄 | 🔄 | In-progress |
-| OpenAI Codex | — | — | Waiting on upstream (openai/codex #2109) |
+| Codex (OpenAI) | ✅ | ✅ | Fully supported (has own docs page) |
 | Junie & JetBrains IDEs | — | — | Planned |
 | Amp (Sourcegraph) | ✅ | ✅ | Supported |
 | Ona | — | — | Planned |
