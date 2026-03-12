@@ -151,7 +151,8 @@ jobs:
                   bars += f"| {lbl} | {bar} | {ln} |\n"
 
           lines = []
-          lines.append('## AI Authorship Report')
+          lines.append(f'## AI Authorship Report — PR #{pr_number}')
+          lines.append(f'> **{pr_title}** by `{pr_author}`')
           lines.append('')
           lines.append('| Metric | Value |')
           lines.append('|--------|-------|')
