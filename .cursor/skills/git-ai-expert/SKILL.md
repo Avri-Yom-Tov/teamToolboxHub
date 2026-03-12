@@ -22,20 +22,22 @@ GitHub Copilot, Gemini CLI, Codex, OpenCode, Continue, and more) which explicitl
 they write. This is a fundamental design choice — no heuristics, no guessing.
 
 **Key facts:**
-- Open source: https://github.com/git-ai-project/git-ai (~1.3K stars)
+- Open source: https://github.com/git-ai-project/git-ai
 - Written in Rust — minimal overhead (10-20ms per git command)
 - Uses Git Notes (refs/notes/ai) to store authorship data
 - Install per-machine, not per-repo. Works offline, no API keys needed
 - No background daemons, keyloggers, or filewatchers
 - Preserves attribution through rebase, cherry-pick, merge, squash, amend, stash
 - Open standard: https://github.com/git-ai-project/git-ai/blob/main/specs/git_ai_standard_v3.0.0.md
+- Docs site: https://usegitai.com/docs (CLI, Teams, Guides sections)
 
-## Two tiers
+## Three tiers
 
 | Tier | What it is | Cost |
 |------|-----------|------|
 | **CLI (Open Source)** | Git extension installed on developer machines. Tracks AI authorship at commit level via git notes. Includes blame, diff, stats, status commands. All data stays in git. | Free |
-| **Teams (Platform)** | Cloud or self-hosted pipeline + dashboards. Joins CLI data with PR metrics, token usage, cost, prompt traces, APM incidents. Tracks AI code through entire SDLC. | Paid |
+| **Teams (Platform)** | Cloud pipeline + dashboards. Joins CLI data with PR metrics, token usage, cost, prompt traces, APM incidents. Tracks AI code through entire SDLC. | Paid |
+| **Enterprise** | Self-hosted or cloud. Adds data warehouse export, self-hosted deployment, and automatic web UI squash/rebase fix. | Paid |
 
 **The user's organization wants to use the free CLI tier only**, with all data stored in their own GitHub repositories via git notes.
 
@@ -47,11 +49,15 @@ This skill uses progressive disclosure. Read the appropriate reference file base
 Read when the user needs help with:
 - Full CLI command reference (blame, diff, stats, status, show, show-prompt, config, checkpoint)
 - Configuration options (config.json keys, prompt storage modes, repository patterns)
+- New config options: `include_prompts_in_repositories`, `default_prompt_storage`, `feature_flags`
 - Git note format and schema details
 - History rewriting support table (which operations preserve attribution)
 - Performance characteristics and debugging
 - Plumbing commands (checkpoint, squash-authorship, git-path)
 - `.git-ai-ignore` file format
+- The `/ask` skill for querying AI intent behind code
+- Personal dashboard (`git-ai stats` based personal insights)
+- Commit stats (detailed per-commit and range stats)
 - Uninstalling git-ai
 
 ### `references/org-rollout.md`
@@ -67,7 +73,7 @@ Read when the user needs help with:
 
 ### `references/agent-integrations.md`
 Read when the user needs help with:
-- Setting up specific agent integrations (Cursor, Claude Code, Copilot, Codex, Gemini CLI, Windsurf)
+- Setting up specific agent integrations (Cursor, Claude Code, Copilot, Codex, Gemini CLI, Windsurf, OpenCode, Continue, Droid, Junie, Rovo Dev, Amp)
 - How hooks work for each agent (exact JSON config shown)
 - Troubleshooting agent-specific issues
 - Adding support for a custom/internal coding agent (agent-v1 preset)
@@ -133,15 +139,24 @@ git-ai blame <file> # See AI attribution per line
 
 ## Supported agents
 
-| Agent | Support Level |
-|-------|--------------|
-| Cursor | Agent mode ✓, Tab completion ✓ (beta), CLI ✓, Prompt saving ✓ |
-| Claude Code | Fully supported (Agent ✓, Prompt saving ✓) |
-| Codex | Fully supported |
-| GitHub Copilot | VS Code ✓, JetBrains ✗ |
-| Gemini CLI | CLI ✓ |
-| Windsurf | All except Model name tracking |
-| Amp, Droid, Junie, Rovo Dev, OpenCode, Continue | Fully or partially supported |
+| Agent | Authorship | Prompts | Notes |
+|-------|-----------|---------|-------|
+| Cursor (>1.7) | ✅ | ✅ | Agent mode, CLI. Tab completions beta. |
+| Claude Code | ✅ | ✅ | Fully supported |
+| GitHub Copilot | ✅ | ✅ | VS Code only (JetBrains ✗) |
+| Gemini CLI | ✅ | ✅ | CLI |
+| Continue | ✅ | ✅ | CLI only; VS Code/IntelliJ in-progress |
+| OpenCode | ✅ | ✅ | Fully supported |
+| Atlassian Rovo Dev | ✅ | ✅ | CLI |
+| Droid | ✅ | ✅ | Supported |
+| Windsurf | 🔄 | 🔄 | In-progress |
+| Augment Code | 🔄 | 🔄 | In-progress |
+| AWS Kiro | 🔄 | 🔄 | In-progress |
+| OpenAI Codex | — | — | Waiting on upstream (openai/codex #2109) |
+| Junie & JetBrains IDEs | — | — | Planned |
+| Amp (Sourcegraph) | ✅ | ✅ | Supported |
+| Ona | — | — | Planned |
+| Google Antigravity | — | — | Planned |
 
 ## System requirements
 

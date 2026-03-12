@@ -97,6 +97,14 @@ Create the standard config for all developers:
 | `telemetry_oss` | `"off"` | No anonymous data sent to Git AI maintainers |
 | `disable_auto_updates` | `true` | Control updates via your own rollout schedule |
 
+**Additional config options for advanced setups:**
+
+| Setting | Value | Why |
+|---------|-------|-----|
+| `include_prompts_in_repositories` | Pattern[] | Override prompt storage for specific repos |
+| `default_prompt_storage` | `"local"` or `"notes"` | Fallback storage mode for repos not in include list |
+| `feature_flags` | object | Feature flag overrides, set with dot notation (`feature_flags.my_flag`) |
+
 ### 2.2 Optional: Exclude sensitive repos
 
 ```json
@@ -270,16 +278,18 @@ git-ai blame src/main.ts
 | Git notes attribution | Yes | Yes | Yes |
 | Personal dashboard | Yes | Yes | Yes |
 | Prompt storage in notes | Yes | Yes | Yes |
+| /ask skill (cross-agent) | Yes | Yes | Yes |
 | Team prompt store | No | Yes | Yes |
 | PR-level metrics | No | Yes | Yes |
 | Team dashboards | No | Yes | Yes |
 | AI durability / rework | No | Yes | Yes |
 | Cost tracking | No | Yes | Yes |
+| Code durability evals | No | Yes | Yes |
 | Data warehouse export | No | No | Yes |
 | Self-hosted | N/A | No | Yes |
 | Web UI squash/rebase fix | CI scripts (OSS) | Automatic | Automatic |
 
-**Bottom line**: The free tier provides full commit-level AI attribution, blame, stats, and note syncing. The paid tiers add PR-level analytics, team dashboards, and cloud prompt storage.
+**Bottom line**: The free tier provides full commit-level AI attribution, blame, stats, note syncing, personal dashboard, and the /ask skill. The paid tiers add PR-level analytics, team dashboards, cloud prompt storage, and code durability tracking.
 
 ---
 
