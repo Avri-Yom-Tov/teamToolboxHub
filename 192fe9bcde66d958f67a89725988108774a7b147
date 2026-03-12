@@ -1,0 +1,24 @@
+.github/workflows/pr-ai-comment.yml
+  13d2dbd711cd13e8 154-155
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.11",
+  "base_commit_sha": "192fe9bcde66d958f67a89725988108774a7b147",
+  "prompts": {
+    "13d2dbd711cd13e8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "f525f83b-7ccd-42a2-bb9b-c2b18eb80ce2",
+        "model": "claude-4.6-opus-high-thinking"
+      },
+      "human_author": "Avri ! <avraham.yom-tov@nice.com>",
+      "messages": [],
+      "total_additions": 234,
+      "total_deletions": 233,
+      "accepted_lines": 36,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/e90ecd74feca9e1168367f69bdebb4e012d7fdc0b9242436d82e472b342b45ce"
+    }
+  }
+}
