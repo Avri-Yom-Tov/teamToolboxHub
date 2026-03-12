@@ -1,6 +1,6 @@
 
 
-
+where git
 
 git log --show-notes=ai 
 git log --show-notes=ai --oneline
