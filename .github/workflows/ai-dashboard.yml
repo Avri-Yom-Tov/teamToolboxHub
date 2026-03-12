@@ -176,7 +176,7 @@ jobs:
                 --green:#34d399;--r:12px;
               }}
               body{{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;padding:2rem;min-height:100vh;max-width:1400px;margin:0 auto}}
-              header{{text-align:center;margin-bottom:3rem;padding-bottom:2rem;border-bottom:1px solid var(--border)}}
+              header{{text-align:center;margin-bottom:1rem;padding-bottom:2rem;border-bottom:1px solid var(--border)}}
               h1{{font-size:2.5rem;font-weight:700;letter-spacing:-.03em;margin-bottom:.75rem;background:linear-gradient(135deg,var(--accent),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}}
               header p{{color:var(--sub);font-size:1rem;margin:0 auto;max-width:600px;line-height:1.6}}
               .ts{{font-family:'IBM Plex Mono',monospace;font-size:.75rem;color:var(--muted);margin-top:1rem}}
@@ -235,11 +235,10 @@ jobs:
             <header>
               <h1>AI Authorship Dashboard</h1>
               <p>Cross-agent statistics and session analysis to improve your AI-aided development.</p>
-              <br>
-              <div class="period-badge">Last 7 days</div>
             </header>
 
             <div class="grid-top">
+              <div class="period-badge">Last 7 days</div>
               <div class="card">
                 <div class="lbl">AI CODE</div>
                 <div class="big">{ai_pct}%</div>
@@ -247,10 +246,10 @@ jobs:
                   <div class="split-human" style="flex:{human_pct}"></div>
                   <div class="split-ai"    style="flex:{ai_pct}"></div>
                 </div>
-                <div class="split-labels">
-                  # <span>&#9632; Human {human_pct}%</span>
-                  # <span>AI {ai_pct}% &#9632;</span>
-                </div>
+                <!-- <div class="split-labels">
+                  <span>&#9632; Human {human_pct}%</span>
+                  <span>AI {ai_pct}% &#9632;</span>
+                </div> -->
               </div>
               <div class="card">
                 <div class="lbl">ACCEPTANCE RATE</div>
@@ -259,10 +258,10 @@ jobs:
                   <div class="split-accept" style="flex:{accept_rate}"></div>
                   <div class="split-reject" style="flex:{reject_rate}"></div>
                 </div>
-                <div class="split-labels">
-                  # <span>&#9632; Accepted {accept_rate}%</span>
-                  # <span>Rejected {reject_rate}% &#9632;</span>
-                </div>
+                <!-- <div class="split-labels">
+                  <span>&#9632; Accepted {accept_rate}%</span>
+                  <span>Rejected {reject_rate}% &#9632;</span>
+                </div> -->
               </div>
               <div class="card">
                 <div class="lbl">TOP MODELS</div>
