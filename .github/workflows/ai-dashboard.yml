@@ -126,7 +126,7 @@ jobs:
 
           total_commits   = auth.get('total_commits', 0)
           commits_with_ai = auth.get('commits_with_authorship', 0)
-          updated_at      = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M UTC')
+          updated_at = datetime.datetime.now().strftime('%H:%M %Y-%m-%d')
 
           COLORS = ['#4fa3e3','#a78bfa','#34d399','#fb923c','#f472b6']
 
@@ -186,7 +186,7 @@ jobs:
               .card{{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.5rem;position:relative;overflow:hidden;transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}}
               .card:hover{{transform:translateY(-2px);border-color:var(--muted);box-shadow:0 8px 24px rgba(0,0,0,.3)}}
               .card::before{{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(249,115,22,.03),transparent 60%);pointer-events:none}}
-              .lbl{{font-size:.68rem;font-family:'IBM Plex Mono',monospace;letter-spacing:.12em;color:var(--sub);text-transform:uppercase;margin-bottom:1.2rem;font-weight:600}}
+              .lbl{{font-size:.68rem;font-family:'IBM Plex Mono',monospace;letter-spacing:.12em;color:var(--sub);text-transform:uppercase;margin-bottom:1.2rem;font-weight:700;text-align:center}}
               .big{{font-size:4rem;font-weight:700;color:var(--accent);line-height:1;font-family:'IBM Plex Mono',monospace;text-align:center;text-shadow:0 0 40px rgba(249,115,22,.3)}}
               .split-bar{{display:flex;height:10px;border-radius:5px;overflow:hidden;margin-top:1rem;gap:2px;box-shadow:inset 0 2px 4px rgba(0,0,0,.3)}}
               .split-human{{background:linear-gradient(90deg,var(--blue),#5fb3f3);border-radius:5px 0 0 5px}}
@@ -235,7 +235,7 @@ jobs:
             <header>
               <h1>AI Authorship Dashboard</h1>
               <p>Cross-agent statistics and session analysis to improve your AI-aided development.</p>
-              <div class="ts">Updated: {updated_at}</div>
+              <br>
               <div class="period-badge">Last 7 days</div>
             </header>
 
@@ -248,8 +248,8 @@ jobs:
                   <div class="split-ai"    style="flex:{ai_pct}"></div>
                 </div>
                 <div class="split-labels">
-                  <span>&#9632; Human {human_pct}%</span>
-                  <span>AI {ai_pct}% &#9632;</span>
+                  # <span>&#9632; Human {human_pct}%</span>
+                  # <span>AI {ai_pct}% &#9632;</span>
                 </div>
               </div>
               <div class="card">
@@ -260,8 +260,8 @@ jobs:
                   <div class="split-reject" style="flex:{reject_rate}"></div>
                 </div>
                 <div class="split-labels">
-                  <span>&#9632; Accepted {accept_rate}%</span>
-                  <span>Rejected {reject_rate}% &#9632;</span>
+                  # <span>&#9632; Accepted {accept_rate}%</span>
+                  # <span>Rejected {reject_rate}% &#9632;</span>
                 </div>
               </div>
               <div class="card">
@@ -310,7 +310,8 @@ jobs:
               </div>
             </div>
 
-            <div class="footer">powered by git-ai · nice-cxone </div>
+            <div class="footer">powered by git-ai · nice-cxone · updated at: {updated_at}</div>
+
           </body>
           </html>"""
 
