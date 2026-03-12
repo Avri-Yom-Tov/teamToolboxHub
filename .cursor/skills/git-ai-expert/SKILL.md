@@ -49,10 +49,11 @@ This skill uses progressive disclosure. Read the appropriate reference file base
 Read when the user needs help with:
 - Full CLI command reference (blame, diff, stats, status, show, show-prompt, config, checkpoint)
 - Configuration options (config.json keys, prompt storage modes, repository patterns)
-- New config options: `include_prompts_in_repositories`, `default_prompt_storage`, `feature_flags`
+- Config options: `ignore_prompts`, `include_prompts_in_repositories`, `default_prompt_storage`, `feature_flags`
+- `git-ai ci github install` / `git-ai ci gitlab install` commands
 - Git note format and schema details
 - History rewriting support table (which operations preserve attribution)
-- Performance characteristics and debugging
+- Performance characteristics, timing breakdown, git notes sync benchmarks, and debugging
 - Plumbing commands (checkpoint, squash-authorship, git-path)
 - `.git-ai-ignore` file format
 - The `/ask` skill for querying AI intent behind code
@@ -64,9 +65,12 @@ Read when the user needs help with:
 ### `references/org-rollout.md`
 Read when the user needs help with:
 - Planning a phased rollout (pilot → org config → distribution → monitoring)
+- Pilot evaluation guide (10–20 engineers, 1–3 repos, 2–4 weeks)
 - Organization-wide config.json (prompt_storage, allow/exclude repos, telemetry)
-- MDM / endpoint management deployment (Windows PowerShell scripts, Unix)
+- MDM / endpoint management deployment — Option B (user-scoped) or Option C (overwrite existing git symlink)
 - PATH configuration across developer fleet
+- CI workflows for squash/rebase merge attribution: GitHub Actions, GitLab CI, BitBucket/Azure status
+- Pilot dashboard review: AI usage metrics, contributor metrics, expected adoption percentages
 - Free vs paid tier feature comparison table
 - The `/ask` skill and AGENTS.md integration
 - Excluding sensitive repos or prompts from tracking

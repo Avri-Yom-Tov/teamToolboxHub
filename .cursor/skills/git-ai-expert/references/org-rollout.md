@@ -37,6 +37,8 @@ Developer Machine                    GitHub (your org)
 
 ## Phase 1: Pilot Group
 
+**Recommended pilot**: 10–20 engineers, 1–3 repositories, 2–4 weeks. Goals: confirm Git AI doesn't get in the way, and verify data accuracy.
+
 ### 1.1 Install on pilot machines
 
 **Mac / Linux / WSL:**
@@ -61,12 +63,26 @@ git-ai install-hooks   # configure agent integrations
 
 ### 1.3 Test the flow
 
-1. Open Cursor (or any supported agent), generate some code
+1. Open Cursor (or any supported agent), generate some code with 2–3 agents from the team's normal workflow
 2. Run `git-ai status` to see AI vs human attribution
 3. Commit: `git commit -a -m "test AI tracking"`
-4. Check note: `git log --show-notes=ai`
-5. Push and verify notes sync: `git push`
-6. On another machine: `git fetch` then `git-ai blame <file>`
+4. Check blame: `git-ai blame src/example.ts` — every AI-written line is attributed to the agent/model
+5. Check note: `git log --show-notes=ai`
+6. Push and verify notes sync: `git push`
+7. On another machine: `git fetch` then `git-ai blame <file>`
+
+### 1.4 Test history-rewriting operations
+
+Attribution should survive all of these:
+
+```bash
+git rebase main
+git cherry-pick <sha>
+git commit --amend
+git add -p              # partial staging
+```
+
+Run `git-ai blame` after each one to verify.
 
 ---
 
@@ -164,9 +180,9 @@ EOF
 git-ai install-hooks
 ```
 
-### Option B: MDM / Endpoint Management (large teams)
+### Option B: MDM / Endpoint Management — User-Scoped Directory (large teams)
 
-For enterprise-scale rollout without manual steps:
+For enterprise-scale rollout without manual steps. Installs to `~/.git-ai/bin/`:
 
 1. **Download the binary** from the official install scripts:
    - Windows: https://github.com/git-ai-project/git-ai/blob/main/install.ps1
@@ -217,14 +233,155 @@ if ($currentPath -notlike "*\.git-ai\bin*") {
 }
 ```
 
+### Option C: MDM — Overwrite Existing Git Symlink
+
+Use when your fleet already exposes `git` from a shared directory locked into PATH (e.g. `/usr/local/bin/git`). No PATH changes needed — just replace the existing `git` entry.
+
+> macOS SIP prevents modifying `/usr/bin`, so pick a writable directory like `/usr/local/bin`.
+
+#### Unix/Linux/macOS
+
+```bash
+git_path="$(command -v git)"
+git_dir="$(dirname "$git_path")"
+
+# Preserve original git
+if [ -L "$git_path" ]; then
+    sudo ln -sf "$(readlink "$git_path")" "$git_dir/git-og"
+else
+    sudo mv "$git_path" "$git_dir/git-og"
+fi
+
+# Install git-ai and point git at it
+sudo install -m 0755 /path/to/git-ai "$git_dir/git-ai"
+sudo ln -sf "$git_dir/git-ai" "$git_path"
+```
+
+#### Windows
+
+```powershell
+$gitPath = (Get-Command git).Source
+$gitDir = Split-Path $gitPath
+
+# Preserve original git
+if ((Get-Item $gitPath).Attributes -band [IO.FileAttributes]::ReparsePoint) {
+    $target = (Get-Item $gitPath).Target
+    New-Item -ItemType SymbolicLink -Path (Join-Path $gitDir 'git-og.exe') -Target $target | Out-Null
+    Remove-Item $gitPath
+} else {
+    Rename-Item -Path $gitPath -NewName 'git-og.exe'
+}
+
+# Install git-ai
+Copy-Item -Path 'C:\path\to\git-ai.exe' -Destination (Join-Path $gitDir 'git-ai.exe')
+
+# Replace git.exe (symlink requires Developer Mode or elevated privileges)
+New-Item -ItemType SymbolicLink -Path (Join-Path $gitDir 'git.exe') -Target (Join-Path $gitDir 'git-ai.exe')
+
+# Fallback when symlinks are unavailable
+# Copy-Item -Path (Join-Path $gitDir 'git-ai.exe') -Destination (Join-Path $gitDir 'git.exe')
+```
+
+For Option C, `config.json` `git_path` should point to the absolute path of the preserved binary (e.g. `/usr/local/bin/git-og` or `C:\Program Files\Git\cmd\git-og.exe`).
+
 #### Verify installation (all platforms)
 
 ```bash
-which git          # should show .git-ai/bin/git
+which git          # should show .git-ai/bin/git (Option B) or existing path (Option C)
 git-ai --version   # should show version
 git-og --version   # should show original git version
 git-ai config      # should show org config
 ```
+
+---
+
+## CI Workflows (Squash/Rebase Merge Attribution)
+
+GitHub/GitLab/Bitbucket web UIs perform squash and rebase merges server-side where git-ai isn't running. CI scripts reconstruct authorship after these merges.
+
+> Git AI has a Cloud + Self-Hosted SCM App under development that will do this automatically. For now, use CI scripts.
+
+### GitHub Actions
+
+```bash
+git-ai ci github install    # creates .github/workflows/git-ai.yaml
+```
+
+Generated workflow:
+
+```yaml
+name: Git AI
+on:
+  pull_request:
+    types: [closed]
+jobs:
+  git-ai:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Install git-ai
+        run: |
+          curl -fsSL https://usegitai.com/install.sh | bash
+          echo "$HOME/.git-ai/bin" >> $GITHUB_PATH
+      - name: Run git-ai
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git-ai ci github run
+```
+
+### GitLab CI
+
+```bash
+git-ai ci gitlab install    # prints YAML snippet to add to .gitlab-ci.yml
+```
+
+The default `CI_JOB_TOKEN` often lacks API query permissions. Create a dedicated access token:
+
+1. **Settings > Access tokens > Add new token** — Name: `git-ai`, Role: Maintainer, Scopes: `api`, `write_repository`
+2. **Settings > CI/CD > Variables > Add variable** — Key: `GITLAB_TOKEN`, Value: paste token, check Masked
+
+```yaml
+git-ai:
+  stage: build
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE == "push"
+      when: always
+  script:
+    - curl -fsSL https://usegitai.com/install.sh | bash
+    - export PATH="$HOME/.git-ai/bin:$PATH"
+    - git config --global user.name "gitlab-ci[bot]"
+    - git config --global user.email "gitlab-ci[bot]@users.noreply.gitlab.com"
+    - git-ai ci gitlab run
+```
+
+### BitBucket Pipelines / Azure Repos
+
+Not currently supported. PRs welcome on the Git AI GitHub repo.
+
+---
+
+## Pilot Dashboard Review
+
+After the pilot group has committed for 1–2 weeks, review metrics (Teams dashboards populate automatically; free tier uses CLI stats).
+
+### AI Usage — what to check
+
+| Metric | What to check |
+|--------|---------------|
+| % AI-assisted PRs | Does this match how often the team uses agents? |
+| % AI code | Is this consistent with what developers self-report? |
+| Merged AI code (week) | Is the trend increasing as adoption grows? |
+
+Teams using agents heavily typically see 40–70% AI-authored code.
+
+### Contributor Metrics
+
+Per-developer breakdowns reveal adoption patterns. Look for outliers — developers who are not showing AI usage despite using agents may have a configuration issue.
 
 ---
 

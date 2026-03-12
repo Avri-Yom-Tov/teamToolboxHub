@@ -190,6 +190,18 @@ Print path to the underlying git binary.
 git-ai git-path
 ```
 
+#### CI commands
+
+Install CI workflow files for supported platforms:
+
+```bash
+git-ai ci github install    # creates .github/workflows/git-ai.yaml
+git-ai ci github run         # process merge (called by CI)
+
+git-ai ci gitlab install    # prints YAML snippet for .gitlab-ci.yml
+git-ai ci gitlab run         # process merge (called by CI)
+```
+
 #### version
 
 ```bash
@@ -206,6 +218,7 @@ Config file: `$HOME/.git-ai/config.json` (Linux/macOS) or `%USERPROFILE%\.git-ai
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `git_path` | Path | Shell PATH | Path to original `git` binary |
+| `ignore_prompts` | boolean | false | When true, discard all prompt data (no prompts stored anywhere) |
 | `prompt_storage` | `"default"` \| `"notes"` \| `"local"` | `"default"` | Where prompt data is stored |
 | `allow_repositories` | Pattern[] | [] (all) | Restrict to matching remotes |
 | `exclude_repositories` | Pattern[] | [] | Block matching remotes (overrides allow) |
@@ -310,6 +323,36 @@ Web UI squash/rebase merges (GitHub, GitLab, Bitbucket) require Git AI for Teams
 - Note sync: <15ms even with 100,000 notes
 - Storage: <1% of repo size for typical repos
 - Scales with diff size, not repo size
+- Automatically detects non-interactive environments (CI) and optimizes accordingly
+
+### Typical Commit Timing Breakdown
+
+| Phase | Time |
+|-------|------|
+| Forwarding to git overhead | 10-20ms |
+| Pre-commit checkpoint | 5-15ms |
+| Git commit execution | (varies by repo) |
+| Post-commit authorship log generation | 20-100ms |
+| **Total Git AI overhead** | **~35-135ms** |
+
+### Git Notes Sync Benchmarks
+
+Note merges scale linearly with *new* notes, not total notes:
+
+| Total Notes | New Notes | Sync Time |
+|-------------|-----------|-----------|
+| 1,000 | 10 | 0.007s |
+| 1,000 | 1,000 | 0.010s |
+| 10,000 | 10 | 0.007s |
+| 10,000 | 1,000 | 0.010s |
+| 50,000 | 10 | 0.008s |
+| 50,000 | 1,000 | 0.010s |
+| 100,000 | 10 | 0.009s |
+| 100,000 | 1,000 | 0.011s |
+
+### Storage
+
+Notes are stored in a commit tree structure (not individual refs), so there is no practical limit on note count and repos won't hit git's ref limits.
 
 Debug performance: `GIT_AI_DEBUG_PERFORMANCE=1 git-ai <command>`
 
