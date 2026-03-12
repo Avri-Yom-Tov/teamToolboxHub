@@ -24,7 +24,7 @@
     .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.5rem;position:relative;overflow:hidden;transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
     .card:hover{transform:translateY(-2px);border-color:var(--muted);box-shadow:0 8px 24px rgba(0,0,0,.3)}
     .card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(249,115,22,.03),transparent 60%);pointer-events:none}
-    .lbl{font-size:.68rem;font-family:'IBM Plex Mono',monospace;letter-spacing:.12em;color:var(--sub);text-transform:uppercase;margin-bottom:1.2rem;font-weight:600}
+    .lbl{font-size:.68rem;font-family:'IBM Plex Mono',monospace;letter-spacing:.12em;color:var(--sub);text-transform:uppercase;margin-bottom:1.2rem;font-weight:700;text-align:center}
     .big{font-size:4rem;font-weight:700;color:var(--accent);line-height:1;font-family:'IBM Plex Mono',monospace;text-align:center;text-shadow:0 0 40px rgba(249,115,22,.3)}
     .split-bar{display:flex;height:10px;border-radius:5px;overflow:hidden;margin-top:1rem;gap:2px;box-shadow:inset 0 2px 4px rgba(0,0,0,.3)}
     .split-human{background:linear-gradient(90deg,var(--blue),#5fb3f3);border-radius:5px 0 0 5px}
@@ -73,7 +73,7 @@
   <header>
     <h1>AI Authorship Dashboard</h1>
     <p>Cross-agent statistics and session analysis to improve your AI-aided development.</p>
-    <div class="ts">Updated: 2026-03-12 22:08 UTC</div>
+    <br>
     <div class="period-badge">Last 7 days</div>
   </header>
 
@@ -86,20 +86,20 @@
         <div class="split-ai"    style="flex:7.0"></div>
       </div>
       <div class="split-labels">
-        <span>&#9632; Human 93.0%</span>
-        <span>AI 7.0% &#9632;</span>
+        # <span>&#9632; Human 93.0%</span>
+        # <span>AI 7.0% &#9632;</span>
       </div>
     </div>
     <div class="card">
       <div class="lbl">ACCEPTANCE RATE</div>
-      <div class="big" style="color:var(--green);text-shadow:0 0 40px rgba(52,211,153,.3)">16.5%</div>
+      <div class="big" style="color:var(--green);text-shadow:0 0 40px rgba(52,211,153,.3)">16.4%</div>
       <div class="split-bar">
-        <div class="split-accept" style="flex:16.5"></div>
-        <div class="split-reject" style="flex:83.5"></div>
+        <div class="split-accept" style="flex:16.4"></div>
+        <div class="split-reject" style="flex:83.6"></div>
       </div>
       <div class="split-labels">
-        <span>&#9632; Accepted 16.5%</span>
-        <span>Rejected 83.5% &#9632;</span>
+        # <span>&#9632; Accepted 16.4%</span>
+        # <span>Rejected 83.6% &#9632;</span>
       </div>
     </div>
     <div class="card">
@@ -107,14 +107,14 @@
       <div class="model-row">
       <span class="model-name">Cursor / claude-4.6-opus-high-…</span>
       <div class="model-bar-wrap"><div class="model-bar" style="width:100%;background:#4fa3e3"></div></div>
-      <span class="model-count">81</span>
+      <span class="model-count">80</span>
     </div><div class="model-row">
       <span class="model-name">Cursor</span>
-      <div class="model-bar-wrap"><div class="model-bar" style="width:90%;background:#a78bfa"></div></div>
+      <div class="model-bar-wrap"><div class="model-bar" style="width:91%;background:#a78bfa"></div></div>
       <span class="model-count">73</span>
     </div><div class="model-row">
       <span class="model-name">GitHub Copilot</span>
-      <div class="model-bar-wrap"><div class="model-bar" style="width:43%;background:#34d399"></div></div>
+      <div class="model-bar-wrap"><div class="model-bar" style="width:44%;background:#34d399"></div></div>
       <span class="model-count">35</span>
     </div><div class="model-row">
       <span class="model-name">Cursor / claude-4-opus</span>
@@ -132,7 +132,7 @@
     <div class="card">
       <div class="lbl">TOP AGENT</div>
       <div class="agent"><span class="dot"></span>Cursor</div>
-      <div style="margin-top:1rem;color:var(--sub);font-size:.8rem">81 AI lines committed</div>
+      <div style="margin-top:1rem;color:var(--sub);font-size:.8rem">80 AI lines committed</div>
     </div>
     <div class="card">
       <div class="lbl">AI WAIT TIME</div>
@@ -142,9 +142,9 @@
     <div class="card">
       <div class="lbl">AI OUTPUT</div>
       <div class="out-grid">
-        <div class="out-item"><label>GENERATED</label><div class="out-val c-blue">1156</div></div>
-        <div class="out-item"><label>COMMITTED</label><div class="out-val c-green">191</div></div>
-        <div class="out-item"><label>ACCEPTED</label><div class="out-val c-orange">191</div></div>
+        <div class="out-item"><label>GENERATED</label><div class="out-val c-blue">1157</div></div>
+        <div class="out-item"><label>COMMITTED</label><div class="out-val c-green">190</div></div>
+        <div class="out-item"><label>ACCEPTED</label><div class="out-val c-orange">190</div></div>
         <div class="out-item"><label>AGENTS</label><div class="out-val c-white">2</div></div>
       </div>
     </div>
@@ -199,17 +199,18 @@
     </div>
     <div class="card">
       <div class="lbl">CONTRIBUTORS WITH AUTHORSHIP DATA</div>
-      <div class="contrib-wrap"><div class="contrib-tag">avriFromHome</div><div class="contrib-tag">Avri !</div></div>
+      <div class="contrib-wrap"><div class="contrib-tag">Avri !</div><div class="contrib-tag">avriFromHome</div></div>
       <div class="divider"></div>
       <div class="meta">
-        <span>Total commits: <strong>44</strong></span>
-        <span>With attribution: <strong style="color:var(--green)">20</strong></span>
-        <span>Human lines: <strong>2541</strong></span>
-        <span>AI lines: <strong style="color:var(--accent)">191</strong></span>
+        <span>Total commits: <strong>45</strong></span>
+        <span>With attribution: <strong style="color:var(--green)">21</strong></span>
+        <span>Human lines: <strong>2543</strong></span>
+        <span>AI lines: <strong style="color:var(--accent)">190</strong></span>
       </div>
     </div>
   </div>
 
-  <div class="footer">powered by git-ai · nice-cxone </div>
+  <div class="footer">powered by git-ai · nice-cxone · updated at: 22:19 2026-03-12</div>
+
 </body>
 </html>
