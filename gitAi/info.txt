@@ -2,27 +2,7 @@
 
 
 
-
-git_path הנתיב לבינארי של git על המחשב. חייבים לציין את זה על Windows כי git-ai צריך לדעת איפה git המקורי נמצא כדי לעשות proxy לפקודות.
-
-prompt_storage: "notes" הלב של כל ה-setup שלך. אומר ל-git-ai לשמור את כל נתוני ה-attribution בתוך git notes בתוך ה-repo עצמו — לא לוקאלית על המחשב של המפתח ולא בשרתים של git-ai. זה מה שמאפשר לך לראות את הנתונים מכל מחשב אחר ובGitHub Actions.
-
-telemetry_oss: "off" מכבה שליחת crash reports ומדדי ביצועים לשרתי git-ai. ברירת המחדל היא שזה דלוק. כיבוי זה לא משפיע על שום פונקציונליות — רק מונע תנועת נטוורק יוצאת לצד שלישי.
-
-allow_repositories git-ai יפעל רק על repos שמתאימים לpattern. כל repo שלא מתאים — git-ai פשוט מתעלם ממנו לגמרי, לא כותב notes, לא עושה כלום. חשוב בארגון כדי שמפתחים לא יצברו notes בטעות בפרויקטים אישיים.
-
-disable_auto_updates: true git-ai לא יתקין עדכונים אוטומטית בלי ידיעתך. בארגון אתה רוצה לשלוט מתי מתעדכנים, לא שכל מפתח יקבל גרסה שונה בזמנים שונים.
-
-disable_version_checks: true בכל פקודת fetch/pull/push, git-ai לא ייצור חיבור לשרת כדי לבדוק אם יש גרסה חדשה. חוסך תנועת נטוורק מיותרת ומאיץ קצת את הפקודות.
-
-quiet: true אחרי כל commit לא מוצג ה-bar הגרפי AI/Human בטרמינל של המפתח. הנתונים ממשיכים להישמר ב-notes בדיוק אותו דבר — רק הפלט הויזואלי מושתק.
-
-
-
 git config --global --add remote.origin.push 'refs/notes/*'
-
-
-
 git log --show-notes=ai 
 git fetch origin refs/notes/*:refs/notes/*
 "gitai.enableCheckpointLogging": true,

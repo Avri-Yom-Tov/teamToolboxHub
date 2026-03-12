@@ -216,6 +216,9 @@ Config file: `$HOME/.git-ai/config.json` (Linux/macOS) or `%USERPROFILE%\.git-ai
 | `disable_auto_updates` | boolean | false | Check for updates but don't auto-install |
 | `update_channel` | `"latest"` \| `"next"` | `"latest"` | Stable vs prerelease channel |
 | `quiet` | boolean | false | Suppress chart output after commits |
+| `include_prompts_in_repositories` | Pattern[] | [] | Repos to include for prompt storage (per-repo override) |
+| `default_prompt_storage` | `"default"` \| `"notes"` \| `"local"` | none | Fallback storage mode for repos not matched by include_prompts_in_repositories |
+| `feature_flags` | object | {} | Feature flag overrides; supports dot notation (e.g., `feature_flags.my_flag`) |
 
 ### Prompt Storage Modes
 
@@ -333,3 +336,32 @@ rmdir /s /q %USERPROFILE%\.git-ai
 ```
 
 Remove PATH entry from shell config if present.
+
+---
+
+## The /ask Skill
+
+The `/ask` skill lets you talk to the agent that wrote any code about how to use it, architecture decisions, and the original engineer's intent. Works cross-agent (e.g., ask Cursor about code written by Claude Code). Answers include original intent, not just what the code does.
+
+Usage: type `/ask` followed by your question while in a coding agent that supports git-ai.
+
+To enable project-wide, add to your project's `AGENTS.md`:
+```
+- In plan mode, always use the /ask skill to read the code and the original prompts that generated it.
+```
+
+Docs: https://usegitai.com/docs/cli/context
+
+---
+
+## Personal Dashboard
+
+Git AI provides a personal dashboard for tracking your own AI usage patterns and metrics. Available even on the free tier.
+
+Docs: https://usegitai.com/docs/cli/personal-insights
+
+---
+
+## Commit Stats
+
+Detailed per-commit and range statistics for AI vs human code authorship. See the `stats` command above and docs at https://usegitai.com/docs/cli/commit-stats

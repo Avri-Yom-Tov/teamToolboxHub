@@ -100,7 +100,24 @@ Git AI installs hooks in `~/.claude/settings.json`:
 
 ## Other Agents
 
-Amp, Droid, Junie, Rovo Dev, OpenCode, Continue — all supported via `git-ai install-hooks`.
+Supported via `git-ai install-hooks`:
+- **Droid** — Fully supported
+- **Amp** — Fully supported
+- **Rovo Dev (Atlassian)** — CLI supported
+- **OpenCode** — Fully supported (plugin-based hooks: `tool.execute.before` / `tool.execute.after`)
+- **Continue** — CLI supported; VS Code/IntelliJ integration in-progress
+
+In-progress (partial or pending):
+- **Windsurf** — In-progress (🔄)
+- **Augment Code** — In-progress (🔄)
+- **AWS Kiro** — In-progress (🔄)
+
+Planned / waiting on upstream:
+- **OpenAI Codex** — Waiting on upstream support (openai/codex #2109)
+- **Junie & JetBrains IDEs** — Planned
+- **Ona** — Planned
+- **Sourcegraph Cody + Amp** — Planned
+- **Google Antigravity** — Planned
 
 ---
 
