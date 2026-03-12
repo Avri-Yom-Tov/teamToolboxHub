@@ -20,3 +20,6 @@ Add-MpPreference -ExclusionPath "C:\Users\avrahamy\.git-ai"
 
 "git.path": "C:\\Users\\avrahamy\\.git-ai\\bin\\git",
 "git.path": "C:\\Users\\avrahamy\\AppData\\Local\\Programs\\Git\\cmd\\git.exe",
+
+
+git add . && git commit -m "your message" && git push
