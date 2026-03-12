@@ -1,0 +1,24 @@
+gitAi/orgRun.ps1
+  8a190d2b2c2d3516 23-33,35-38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.11",
+  "base_commit_sha": "3932d81d1609bb4eca4fd1b71f53191ceb485900",
+  "prompts": {
+    "8a190d2b2c2d3516": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "f492baeb-862e-4a72-81d2-e04822a515cc",
+        "model": "unknown"
+      },
+      "human_author": "Avri ! <avraham.yom-tov@nice.com>",
+      "messages": [],
+      "total_additions": 15,
+      "total_deletions": 2,
+      "accepted_lines": 15,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/24278108d370aa6f3ca0b11fa82676b65040e9c169e49670302ff2904a694c62"
+    }
+  }
+}
