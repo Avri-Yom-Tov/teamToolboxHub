@@ -2,7 +2,7 @@
 
 
 # ── Install Git AI ──
-# irm http://usegitai.com/install.ps1 | iex
+irm http://usegitai.com/install.ps1 | iex
 # irm https://raw.githubusercontent.com/git-ai-project/git-ai/main/install.ps1 | iex
 # powershell -NoProfile -ExecutionPolicy Bypass -Command "irm http://usegitai.com/install.ps1 | iex"
 
@@ -16,6 +16,12 @@ git-ai config set allow_repositories "https://github.com/nice-cxone/*" --add
 
 
 
+# ── Disable VS Code extension (not required for CLI-only tracking) ──
+foreach ($editor in @('cursor', 'code')) {
+    if (Get-Command $editor -ErrorAction SilentlyContinue) {
+        & $editor --disable-extension git-ai.git-ai-vscode 2>$null
+    }
+}
 
 
 
@@ -52,3 +58,4 @@ git-ai config set allow_repositories "https://github.com/nice-cxone/*" --add
 # To remove the notes sync configuration 
 # git config --global --unset-all remote.origin.push
 # git config --global --unset-all remote.origin.fetch
+

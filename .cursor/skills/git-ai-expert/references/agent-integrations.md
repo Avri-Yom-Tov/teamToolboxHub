@@ -113,10 +113,8 @@ In-progress (partial or pending):
 - **AWS Kiro** — In-progress (🔄)
 
 Planned / waiting on upstream:
-- **OpenAI Codex** — Waiting on upstream support (openai/codex #2109)
 - **Junie & JetBrains IDEs** — Planned
 - **Ona** — Planned
-- **Sourcegraph Cody + Amp** — Planned
 - **Google Antigravity** — Planned
 
 ---
