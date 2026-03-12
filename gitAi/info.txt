@@ -2,7 +2,8 @@
 
 
 
-git config --global --add remote.origin.push 'refs/notes/*'
 git log --show-notes=ai 
 git fetch origin refs/notes/*:refs/notes/*
+
+
 "gitai.enableCheckpointLogging": true,
