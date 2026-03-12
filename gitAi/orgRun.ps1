@@ -13,7 +13,6 @@ git-ai config set quiet true
 git-ai config set telemetry_oss off
 git-ai config set allow_repositories "https://github.com/nice-cxone/*" --add
 
-# ── Notes sync ( safety net ) ──
 
 
 
@@ -29,7 +28,7 @@ git-ai config set allow_repositories "https://github.com/nice-cxone/*" --add
 
 
 
-
+# ── Notes sync ( safety net ) ──
 # Git AI proxy handles notes sync automatically on push/fetch.
 # These refspecs are a fallback for edge cases where git runs outside the proxy
 # git config --global --add remote.origin.push 'refs/notes/*'
