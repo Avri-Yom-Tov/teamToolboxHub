@@ -6,3 +6,17 @@ git log --show-notes=ai
 git log --show-notes=ai --oneline
 
 "gitai.enableCheckpointLogging": true,
+
+
+
+
+# admin / elevated PowerShellavrahamy
+Add-MpPreference -ExclusionPath "C:\Users\\.git-ai\bin"
+Add-MpPreference -ExclusionPath "C:\Users\avrahamy\.git-ai"
+
+
+  "allow_repositories": [
+    "https://github.com/nice-cxone/*",
+    "https://github.com/Avri-Yom-Tov/teamToolboxHub.git"
+  ],
+
