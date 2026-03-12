@@ -341,27 +341,103 @@ Remove PATH entry from shell config if present.
 
 ## The /ask Skill
 
-The `/ask` skill lets you talk to the agent that wrote any code about how to use it, architecture decisions, and the original engineer's intent. Works cross-agent (e.g., ask Cursor about code written by Claude Code). Answers include original intent, not just what the code does.
+The `/ask` skill lets you talk to the agent that wrote any code about how to use it, architecture decisions, and the original engineer's intent. It is installed automatically at `~/.agents/skills/` and `~/.claude/skills/` during git-ai install.
 
-Usage: type `/ask` followed by your question while in a coding agent that supports git-ai.
+**Key capabilities:**
+- **Cross-agent** — ask Cursor about code originally written by Claude Code, or vice versa
+- **Intent, not just description** — answers include the original requirements and decisions, not just what the code does
+- **Works from any supported agent** — invoke with `/ask` from Cursor, Claude Code, Copilot, Codex, etc.
 
-To enable project-wide, add to your project's `AGENTS.md`:
+**Example:**
+```
+/ask Why didn't we use the SDK here?
+```
+
+An agent **with** /ask access understands the "why" behind the code (original instructions, architectural decisions). An agent **without** /ask can only describe what the code does.
+
+**Enable project-wide** by adding to your project's `AGENTS.md`:
 ```
 - In plan mode, always use the /ask skill to read the code and the original prompts that generated it.
+  Understanding intent will help you write a better plan.
 ```
 
 Docs: https://usegitai.com/docs/cli/context
 
 ---
 
-## Personal Dashboard
+## Personal Dashboard (Free Tier — CLI-based)
 
-Git AI provides a personal dashboard for tracking your own AI usage patterns and metrics. Available even on the free tier.
+The "Personal Dashboard" on the free tier is **CLI-based**, not a web UI. It is powered by `git-ai status` and `git-ai stats`:
+
+**`git-ai status`** shows a real-time terminal view:
+```
+you  ██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ ai
+     4%                                   96%
+     100% AI code accepted | waited 33s for ai
+
+29 secs ago     +103      0  Cursor claude-4.5-opus-high-thinking
+46 secs ago       +2     -1  Cursor claude-4.5-opus-high-thinking
+1 mins ago        +1     -2  Aidan Cunniffe
+2 mins ago       +53      0  Cursor claude-4.5-opus-high-thinking
+5 mins ago        +6    -16  Claude claude-opus-4-5-20251101
+```
+
+This includes:
+- Progress bar of human vs AI authorship percentage
+- Acceptance rate (% of AI code committed unchanged)
+- Wait time (seconds spent waiting for AI)
+- Chronological list of uncommitted checkpoints with lines added/deleted and agent/model attribution
+
+**`git-ai stats`** provides aggregate statistics:
+- Per-commit or range (`HEAD~50..HEAD`, full repo history)
+- JSON output (`--json`) for programmatic analysis
+- Per-tool/model breakdown (`tool_model_breakdown`)
+- Metrics: `ai_accepted`, `mixed_additions`, `human_additions`, `ai_additions`, `time_waiting_for_ai`
+
+Track your usage across agents, compare models, and analyze prompting patterns — all from the terminal.
 
 Docs: https://usegitai.com/docs/cli/personal-insights
 
 ---
 
+## Teams / Enterprise Dashboard (Paid — Web UI)
+
+The paid tiers (Teams and Enterprise) provide a **web-based dashboard** with:
+
+- **AI authorship breakdown per PR** — see % AI code in every pull request
+- **SDLC-wide tracking** — measure AI code % from commit through code review to production
+- **Accepted-rate comparison** — compare how much AI code gets accepted per agent + model
+- **AI-Code Halflife** — how durable is AI code (time before it gets removed or rewritten)
+- **Token usage and cost tracking** — per PR and per developer
+- **Prompt traces** — link from dashboard to the prompts that generated the code
+- **Cross-team agent comparison** — which agents/models work best for different types of work
+- **Code durability evals** — run evals on new MCPs, skills, and agent config changes
+
+Enterprise tier adds: self-hosted deployment, data warehouse export, automatic squash/rebase attribution via SCM bot.
+
+The free CLI tier does **not** include any web dashboard — only terminal-based stats commands.
+
+---
+
 ## Commit Stats
 
-Detailed per-commit and range statistics for AI vs human code authorship. See the `stats` command above and docs at https://usegitai.com/docs/cli/commit-stats
+Detailed per-commit and range statistics for AI vs human code authorship.
+
+Key JSON fields from `git-ai stats --json`:
+
+| Field | Description |
+|-------|-------------|
+| `ai_accepted` | AI lines committed without human edits |
+| `mixed_additions` | AI lines edited by human before commit |
+| `ai_additions` | All lines attributed to AI (includes mixed) |
+| `human_additions` | All lines attributed to humans (includes mixed) |
+| `total_ai_additions` | All lines AI generated during session (even if not in final diff) |
+| `total_ai_deletions` | All lines deleted by AI during session |
+| `time_waiting_for_ai` | Wall-clock seconds waiting for AI responses |
+| `git_diff_added_lines` | Raw added lines in git diff |
+| `git_diff_deleted_lines` | Raw deleted lines in git diff |
+| `tool_model_breakdown` | Per `tool:model` metrics (e.g., `cursor/gpt-5`) |
+
+Note: categories are not mutually exclusive — `mixed_additions` counts in both `human_additions` and `ai_additions`, so their sum can exceed `git_diff_added_lines`.
+
+Docs: https://usegitai.com/docs/cli/commit-stats

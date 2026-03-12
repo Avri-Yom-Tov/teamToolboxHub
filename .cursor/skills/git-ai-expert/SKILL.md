@@ -56,8 +56,9 @@ Read when the user needs help with:
 - Plumbing commands (checkpoint, squash-authorship, git-path)
 - `.git-ai-ignore` file format
 - The `/ask` skill for querying AI intent behind code
-- Personal dashboard (`git-ai stats` based personal insights)
-- Commit stats (detailed per-commit and range stats)
+- **Personal Dashboard** — what CLI-based stats look like, `git-ai status` output, `git-ai stats` metrics
+- **Teams/Enterprise Dashboard** — what the paid web dashboard offers (PR metrics, durability, cost tracking)
+- Commit stats JSON fields and their meanings (ai_accepted, mixed_additions, tool_model_breakdown, etc.)
 - Uninstalling git-ai
 
 ### `references/org-rollout.md`
@@ -173,3 +174,19 @@ This means:
 - MDM deployment distributes the binary across developer machines
 - Enterprise config.json controls repository scope, update behavior, and telemetry
 - No prompt storage in the cloud — prompts stay local or in git notes only
+
+## Dashboard / Analytics overview
+
+**Free tier (CLI-based):**
+- `git-ai status` — real-time terminal progress bar (human vs AI %), acceptance rate, wait time, and chronological checkpoint list with agent/model per change
+- `git-ai stats` — aggregate AI vs human stats per commit or range, JSON output, per-tool/model breakdown
+- No web UI — all data viewed via terminal commands
+
+**Teams/Enterprise tier (paid, web UI):**
+- AI authorship breakdown per PR
+- AI code % tracked through entire SDLC (commit → review → production)
+- Agent/model accepted-rate comparison
+- AI-Code Halflife (code durability)
+- Token usage and cost tracking
+- Team dashboards, prompt traces, cross-team agent comparison
+- Enterprise adds: self-hosted, data warehouse export, automatic squash/rebase via SCM bot
