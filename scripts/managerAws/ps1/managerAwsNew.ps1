@@ -829,9 +829,13 @@ $Global:WPFGui.StartButton.Add_Click({
 
         Write-StatusBar -Text "Starting AWS credential process..." -Indeterminate
 
+        # Convert PSCustomObjects to hashtables so Start-Job's serializer doesn't flatten the list
+        $accountsForJob = @($accountList | ForEach-Object { @{ AccountId = [string]$_.AccountId; Name = [string]$_.Name } })
+
         # Start background job using PowerShell jobs instead of runspaces for simplicity
         $Global:CurrentJob = Start-Job -ScriptBlock {
-            param($Accounts, $MFACode, $user, $role_name, $source_profile, $main_iam_acct_num, $default_region, $MFA_SESSION, $CODEARTIFACT_SESSION, $codeartifact_source_profile, $m2_config_file)
+            param($AccountsBag, $MFACode, $user, $role_name, $source_profile, $main_iam_acct_num, $default_region, $MFA_SESSION, $CODEARTIFACT_SESSION, $codeartifact_source_profile, $m2_config_file)
+            $Accounts = $AccountsBag.Accounts
 
             function addNewLine {
                 param([string] $target_profile_name)
@@ -988,7 +992,7 @@ $Global:WPFGui.StartButton.Add_Click({
             } catch {
                 Write-Output "Error: $($_.Exception.Message)"
             }
-        } -ArgumentList (,$accountList), $mfaCode, $user, $role_name, $source_profile, $main_iam_acct_num, $default_region, $MFA_SESSION, $CODEARTIFACT_SESSION, 'dev-test-perf', $m2_config_file
+        } -ArgumentList @{ Accounts = $accountsForJob }, $mfaCode, $user, $role_name, $source_profile, $main_iam_acct_num, $default_region, $MFA_SESSION, $CODEARTIFACT_SESSION, 'dev-test-perf', $m2_config_file
 
         # Monitor the job
         $Global:JobTimer = New-Object System.Windows.Threading.DispatcherTimer
