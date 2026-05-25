@@ -36,6 +36,7 @@ $Global:AccountList = @(
     [PSCustomObject]@{ AccountId = 211125581625; Name = "rec-test" }
     [PSCustomObject]@{ AccountId = 339712875220; Name = "rec-perf" }
     [PSCustomObject]@{ AccountId = 918987959928; Name = "production" }
+    [PSCustomObject]@{ AccountId = 946153222386; Name = "wfostaging" }
     [PSCustomObject]@{ AccountId = 891377049518; Name = "rec-staging" }
     [PSCustomObject]@{ AccountId = 934137132601; Name = "dev-test-perf" }
     [PSCustomObject]@{ AccountId = 654654430801; Name = "production-rec" }
