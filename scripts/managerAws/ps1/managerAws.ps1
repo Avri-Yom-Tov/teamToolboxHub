@@ -477,7 +477,7 @@ $xaml = @'
                         </Border>
                         <TextBlock Text="AWS Credential Manager" VerticalAlignment="Center"
                                    Foreground="White" FontWeight="SemiBold"
-                                   FontFamily="Segoe UI" FontSize="14" />
+                                   FontFamily="Segoe UI" FontSize="16" />
                     </StackPanel>
                     <!-- Window buttons on the right -->
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
