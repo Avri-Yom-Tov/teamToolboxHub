@@ -14,8 +14,42 @@ import json
 import hmac
 import hashlib
 import struct
+import traceback
 from datetime import datetime
 from pathlib import Path
+
+
+# --- DEBUG LOGGING (independent of the worker thread) ---
+DEBUG_LOG_PATH = Path(__file__).parent / "aws_manager_debug.log"
+
+
+def debug_log(message):
+    """Write a debug message to the dedicated debug log."""
+    try:
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+        line = f"[{timestamp}] {message}"
+        with open(DEBUG_LOG_PATH, "a", encoding="utf-8") as f:
+            f.write(line + "\n")
+        print(line)
+    except Exception:
+        try:
+            print(f"DEBUG_LOG_FAILED: {message}")
+        except Exception:
+            pass
+
+
+debug_log("=" * 80)
+debug_log("STARTUP")
+debug_log(f"sys.argv          = {sys.argv}")
+debug_log(f"__file__          = {__file__}")
+debug_log(f"Path(__file__)    = {Path(__file__).resolve()}")
+debug_log(f"Parent dir        = {Path(__file__).parent.resolve()}")
+debug_log(f"cwd               = {os.getcwd()}")
+debug_log(f"DEBUG_LOG_PATH    = {DEBUG_LOG_PATH.resolve()}")
+debug_log(f"Python            = {sys.executable}")
+debug_log(f"Platform          = {sys.platform}")
+debug_log(f"USERPROFILE       = {os.environ.get('USERPROFILE', '<missing>')}")
+debug_log(f"awsSecretHere set = {bool(os.environ.get('awsSecretHere'))}")
 
 from PyQt5.QtCore import Qt, pyqtSignal, QObject, QSize
 from PyQt5.QtGui import QIcon, QColor, QPixmap, QPainter, QLinearGradient, QBrush
@@ -43,11 +77,7 @@ AWS_ACCOUNTS = [
     {"id": "730335479582", "name": "rec-dev"},
     {"id": "211125581625", "name": "rec-test"},
     {"id": "339712875220", "name": "rec-perf"},
-    {"id": "918987959928", "name": "production"},
-    {"id": "891377049518", "name": "rec-staging"},
     {"id": "934137132601", "name": "dev-test-perf"},
-    {"id": "654654430801", "name": "production-rec"},
-    {"id": "891377174057", "name": "production-rec-uk"},
 ]
 
 CONFIG = {
@@ -57,9 +87,8 @@ CONFIG = {
     "source_profile": "nice-identity",
     "main_iam_acct_num": "736763050260",
     "role_name": "GroupAccess-Developers-Recording",
-    "target_account_num_codeartifact": "369498121101",
-    "target_profile_name_codeartifact": "GroupAccess-NICE-Developers",
-    "mfa_secret_key": os.environ.get("mfaSecretKey", "")
+    "codeartifact_source_profile": "dev-test-perf",
+    "mfa_secret_key": os.environ.get("awsSecretHere", "")
 }
 
 
@@ -110,10 +139,11 @@ class WorkerSignals(QObject):
 
 class AWSCredentialWorker(threading.Thread):
     """Background worker for AWS credential management"""
-    
-    def __init__(self, account, mfa_code, config, signals):
+
+    def __init__(self, default_profile_name, accounts, mfa_code, config, signals):
         super().__init__()
-        self.account = account
+        self.default_profile_name = default_profile_name
+        self.accounts = accounts
         self.mfa_code = mfa_code
         self.config = config
         self.signals = signals
@@ -177,163 +207,181 @@ class AWSCredentialWorker(threading.Thread):
         try:
             self.signals.progress_update.emit(True)
             self.signals.status_update.emit("🔐 Authenticating with MFA...")
-            
+
             user = self.config['user']
             source_profile = self.config['source_profile']
             main_iam_acct_num = self.config['main_iam_acct_num']
             role_name = self.config['role_name']
             default_region = self.config['default_region']
-            target_account_num = self.account['id']
-            target_profile_name = self.account['name']
-            target_account_num_codeartifact = self.config['target_account_num_codeartifact']
-            target_profile_name_codeartifact = self.config['target_profile_name_codeartifact']
+            codeartifact_source_profile = self.config['codeartifact_source_profile']
             token_expiration_seconds = self.config['token_expiration_hours'] * 3600
-            
+
+            profile_names = ", ".join(a['name'] for a in self.accounts)
             self.log("**********************************************************************************************************")
-            self.log(f"This script will obtain temporary credentials for {target_profile_name} and {target_profile_name_codeartifact} and store them")
-            self.log("in your AWS CLI configuration. This will allow certain programs (e.g., IntelliJ IDEA)")
-            self.log(f"to access {target_profile_name} and {target_profile_name_codeartifact} through your {source_profile} account.")
+            self.log(f"Default profile: {self.default_profile_name}. Renewing for: {profile_names}")
+            self.log("This script will obtain temporary credentials and store them in your AWS CLI configuration.")
+            self.log(f"The selected profile credentials will also be mirrored into [default] for tools like IntelliJ IDEA.")
             self.log("**********************************************************************************************************")
-            
+
             MFA_SESSION = f"{source_profile}-mfa-session"
             DEFAULT_SESSION = "default"
             CODEARTIFACT_SESSION = "default-codeartifact"
-            
+
             mfa_device = f"arn:aws:iam::{main_iam_acct_num}:mfa/{user}"
-            target_role = f"arn:aws:iam::{target_account_num}:role/{role_name}"
-            target_role_codeartifact = f"arn:aws:iam::{target_account_num_codeartifact}:role/{role_name}"
-            
+
             self.log(f"MFA Device: {mfa_device}")
-            self.log(f"Target Role: {target_role}")
-            
+
             cmd = f'aws sts get-session-token --serial-number {mfa_device} --duration-seconds {token_expiration_seconds} --token-code {self.mfa_code} --profile {source_profile} --output json'
             self.log(f"Running: aws sts get-session-token...")
             success, output = self.run_aws_command(cmd)
-            
+
             if not success:
                 self.log(f"MFA authentication failed: {output}")
                 self.signals.finished.emit(False, f"MFA failed: {output}")
                 return
-            
+
             token_creds = json.loads(output)
             self.log("Renewed AWS CLI Session with temporary credentials with MFA info...")
-            
+
             self.signals.status_update.emit("⚙️ Configuring MFA session...")
-            
+
             self.run_aws_command(f'aws configure set aws_access_key_id {token_creds["Credentials"]["AccessKeyId"]} --profile {MFA_SESSION}')
             self.run_aws_command(f'aws configure set aws_secret_access_key {token_creds["Credentials"]["SecretAccessKey"]} --profile {MFA_SESSION}')
             self.run_aws_command(f'aws configure set aws_session_token {token_creds["Credentials"]["SessionToken"]} --profile {MFA_SESSION}')
-            self.run_aws_command(f'aws configure set region {default_region} --profile {target_profile_name}')
-            self.run_aws_command(f'aws configure set region {default_region} --profile {target_profile_name_codeartifact}')
-            
+
+            # Pre-set region for each profile
+            for acct in self.accounts:
+                self.run_aws_command(f'aws configure set region {default_region} --profile {acct["name"]}')
+
             self.log(f"Successfully cached token for {token_expiration_seconds} seconds ..")
-            
+
             self.signals.progress_update.emit(False)
             hours_remaining = self.config['token_expiration_hours']
-            
+
             while hours_remaining > 0 and not self.should_stop:
                 self.signals.progress_update.emit(True)
-                self.signals.status_update.emit(f"🔄 Renewing {target_profile_name}...")
-                self.log(f"Renewing {target_profile_name} access keys...")
-                
-                cmd = f'aws sts assume-role --role-arn {target_role} --role-session-name {user} --profile {MFA_SESSION} --query Credentials --output json'
-                success, output = self.run_aws_command(cmd)
-                
-                if not success:
-                    self.log(f"Failed to assume role: {output}")
-                    self.signals.finished.emit(False, f"Role assumption failed: {output}")
-                    return
-                
-                creds = json.loads(output)
-                
-                self.log(f"Renewing {target_profile_name_codeartifact} access keys...")
-                cmd_ca = f'aws sts assume-role --role-arn {target_role_codeartifact} --role-session-name {user} --profile {MFA_SESSION} --query Credentials --output json'
-                success_ca, output_ca = self.run_aws_command(cmd_ca)
-                
-                if not success_ca:
-                    self.log(f"Failed to assume codeartifact role: {output_ca}")
-                
-                creds_codeartifact = json.loads(output_ca) if success_ca else None
-                
-                self.add_new_line(target_profile_name)
-                
-                self.run_aws_command(f'aws configure set aws_access_key_id {creds["AccessKeyId"]} --profile {DEFAULT_SESSION}')
-                self.run_aws_command(f'aws configure set aws_secret_access_key {creds["SecretAccessKey"]} --profile {DEFAULT_SESSION}')
-                self.run_aws_command(f'aws configure set aws_session_token {creds["SessionToken"]} --profile {DEFAULT_SESSION}')
-                self.run_aws_command(f'aws configure set region {default_region} --profile {DEFAULT_SESSION}')
-                
-                self.log(f"{target_profile_name} profile has been updated in ~/.aws/credentials.")
-                
-                if creds_codeartifact:
-                    self.add_new_line(target_profile_name_codeartifact)
-                    
-                    self.run_aws_command(f'aws configure set aws_access_key_id {creds_codeartifact["AccessKeyId"]} --profile {CODEARTIFACT_SESSION}')
-                    self.run_aws_command(f'aws configure set aws_secret_access_key {creds_codeartifact["SecretAccessKey"]} --profile {CODEARTIFACT_SESSION}')
-                    self.run_aws_command(f'aws configure set aws_session_token {creds_codeartifact["SessionToken"]} --profile {CODEARTIFACT_SESSION}')
-                    self.run_aws_command(f'aws configure set region {default_region} --profile {CODEARTIFACT_SESSION}')
-                    
-                    self.log(f"{target_profile_name_codeartifact} profile has been updated in ~/.aws/credentials.")
-                    
-                    cmd_token = f'aws codeartifact get-authorization-token --domain nice-devops --domain-owner 369498121101 --query authorizationToken --output text --region us-west-2 --profile {CODEARTIFACT_SESSION}'
-                    success_token, ca_token = self.run_aws_command(cmd_token)
-                    
-                    if success_token:
-                        self.log("Generated CodeArtifact Token.")
-                        
-                        try:
-                            import xml.etree.ElementTree as ET
-                            settings_file = Path(f"C:\\Users\\{os.environ.get('USERNAME')}\\.m2\\settings.xml")
-                            if settings_file.exists():
-                                ET.register_namespace('', 'http://maven.apache.org/SETTINGS/1.0.0')
-                                tree = ET.parse(settings_file)
-                                root = tree.getroot()
-                                
-                                for server in root.iter():
-                                    if server.tag.endswith('server'):
-                                        server_id = None
-                                        password_elem = None
-                                        for child in server:
-                                            if child.tag.endswith('id'):
-                                                server_id = child.text
-                                            if child.tag.endswith('password'):
-                                                password_elem = child
-                                        
-                                        if server_id in ['cxone-codeartifact', 'platform-utils', 'plugins-codeartifact'] and password_elem is not None:
-                                            password_elem.text = ca_token.strip()
-                                
-                                tree.write(settings_file, encoding='utf-8', xml_declaration=True)
-                                self.log(f"Updated {settings_file} with CodeArtifact Token.")
-                        except Exception as e:
-                            self.log(f"No settings.xml found or using old version: {e}")
-                        
-                        try:
-                            self.run_aws_command('npm config set registry "https://nice-devops-369498121101.d.codeartifact.us-west-2.amazonaws.com/npm/cxone-npm/"')
-                            self.run_aws_command(f'npm config set "//nice-devops-369498121101.d.codeartifact.us-west-2.amazonaws.com/npm/cxone-npm/:_authToken={ca_token.strip()}"')
-                            self.log("Updated NPM with CodeArtifact Token.")
-                        except Exception as e:
-                            self.log(f"NPM not installed or error: {e}")
-                
+                self.signals.status_update.emit(f"🔄 Renewing all profiles...")
+
+                codeartifact_creds = None
+                renewal_failed = False
+
+                for acct in self.accounts:
+                    if self.should_stop:
+                        break
+
+                    target_profile_name = acct['name']
+                    target_account_num = acct['id']
+                    target_role = f"arn:aws:iam::{target_account_num}:role/{role_name}"
+
+                    self.log(f"Renewing {target_profile_name} access keys...")
+                    cmd = f'aws sts assume-role --role-arn {target_role} --role-session-name {user} --profile {MFA_SESSION} --query Credentials --output json'
+                    success, output = self.run_aws_command(cmd)
+
+                    if not success:
+                        self.log(f"Failed to assume role for {target_profile_name} (Account: {target_account_num}): {output}")
+                        renewal_failed = True
+                        continue
+
+                    creds = json.loads(output)
+
+                    self.add_new_line(target_profile_name)
+
+                    self.run_aws_command(f'aws configure set aws_access_key_id {creds["AccessKeyId"]} --profile {target_profile_name}')
+                    self.run_aws_command(f'aws configure set aws_secret_access_key {creds["SecretAccessKey"]} --profile {target_profile_name}')
+                    self.run_aws_command(f'aws configure set aws_session_token {creds["SessionToken"]} --profile {target_profile_name}')
+                    self.run_aws_command(f'aws configure set region {default_region} --profile {target_profile_name}')
+
+                    self.log(f"{target_profile_name} profile has been updated in ~/.aws/credentials.")
+
+                    # If this is the user-selected default profile, mirror credentials into [default]
+                    if target_profile_name == self.default_profile_name:
+                        self.add_new_line(DEFAULT_SESSION)
+                        self.run_aws_command(f'aws configure set aws_access_key_id {creds["AccessKeyId"]} --profile {DEFAULT_SESSION}')
+                        self.run_aws_command(f'aws configure set aws_secret_access_key {creds["SecretAccessKey"]} --profile {DEFAULT_SESSION}')
+                        self.run_aws_command(f'aws configure set aws_session_token {creds["SessionToken"]} --profile {DEFAULT_SESSION}')
+                        self.run_aws_command(f'aws configure set region {default_region} --profile {DEFAULT_SESSION}')
+                        self.log(f"Mirrored {target_profile_name} credentials into [{DEFAULT_SESSION}] profile.")
+
+                    if target_profile_name == codeartifact_source_profile:
+                        codeartifact_creds = creds
+
+                # Use the dev-test-perf credentials to fetch CodeArtifact token + update Maven/NPM
+                if codeartifact_creds:
+                    try:
+                        self.add_new_line(CODEARTIFACT_SESSION)
+
+                        self.run_aws_command(f'aws configure set aws_access_key_id {codeartifact_creds["AccessKeyId"]} --profile {CODEARTIFACT_SESSION}')
+                        self.run_aws_command(f'aws configure set aws_secret_access_key {codeartifact_creds["SecretAccessKey"]} --profile {CODEARTIFACT_SESSION}')
+                        self.run_aws_command(f'aws configure set aws_session_token {codeartifact_creds["SessionToken"]} --profile {CODEARTIFACT_SESSION}')
+                        self.run_aws_command(f'aws configure set region {default_region} --profile {CODEARTIFACT_SESSION}')
+
+                        cmd_token = f'aws codeartifact get-authorization-token --domain nice-devops --domain-owner 369498121101 --query authorizationToken --output text --region us-west-2 --profile {CODEARTIFACT_SESSION}'
+                        success_token, ca_token = self.run_aws_command(cmd_token)
+
+                        if success_token:
+                            self.log(f"Generated CodeArtifact Token using {codeartifact_source_profile} credentials.")
+
+                            try:
+                                import xml.etree.ElementTree as ET
+                                settings_file = Path(f"C:\\Users\\{os.environ.get('USERNAME')}\\.m2\\settings.xml")
+                                if settings_file.exists():
+                                    ET.register_namespace('', 'http://maven.apache.org/SETTINGS/1.0.0')
+                                    tree = ET.parse(settings_file)
+                                    root = tree.getroot()
+
+                                    for server in root.iter():
+                                        if server.tag.endswith('server'):
+                                            server_id = None
+                                            password_elem = None
+                                            for child in server:
+                                                if child.tag.endswith('id'):
+                                                    server_id = child.text
+                                                if child.tag.endswith('password'):
+                                                    password_elem = child
+
+                                            if server_id in ['cxone-codeartifact', 'platform-utils', 'plugins-codeartifact'] and password_elem is not None:
+                                                password_elem.text = ca_token.strip()
+
+                                    tree.write(settings_file, encoding='utf-8', xml_declaration=True)
+                                    self.log(f"Updated {settings_file} with CodeArtifact Token.")
+                            except Exception as e:
+                                self.log(f"No settings.xml found or using old version: {e}")
+
+                            try:
+                                self.run_aws_command('npm config set registry "https://nice-devops-369498121101.d.codeartifact.us-west-2.amazonaws.com/npm/cxone-npm/"')
+                                self.run_aws_command(f'npm config set "//nice-devops-369498121101.d.codeartifact.us-west-2.amazonaws.com/npm/cxone-npm/:_authToken={ca_token.strip()}"')
+                                self.log("Updated NPM with CodeArtifact Token.")
+                            except Exception as e:
+                                self.log(f"NPM not installed or error: {e}")
+                    except Exception as e:
+                        self.log(f"Error generating CodeArtifact token: {e}")
+                else:
+                    self.log(f"Skipping CodeArtifact: {codeartifact_source_profile} credentials not available.")
+
+                if renewal_failed:
+                    self.log("One or more profiles failed to renew. Continuing with next cycle.")
+
                 self.signals.progress_update.emit(False)
                 hour_text = "hour" if hours_remaining == 1 else "hours"
                 self.signals.status_update.emit(f"✅ Running ({hours_remaining}h)")
                 self.log(f"Keep this window open to have your keys renewed every 59 minutes for the next {hours_remaining} {hour_text}.")
-                
+
                 for minute in range(59, 0, -1):
                     if self.should_stop:
                         break
                     time.sleep(60)
                     if minute % 10 == 0:
                         self.signals.status_update.emit(f"⏳ Waiting... ({hours_remaining}h, {minute}m)")
-                
+
                 hours_remaining -= 1
-            
+
             if self.should_stop:
                 self.signals.finished.emit(True, "Stopped by user")
                 self.log("Process stopped by user")
             else:
                 self.signals.finished.emit(True, "MFA token credentials have expired. Please restart this script.")
                 self.log("MFA token credentials have expired. Please restart this script.")
-                
+
         except Exception as e:
             self.log(f"Error: {str(e)}")
             self.signals.finished.emit(False, f"Error: {str(e)}")
@@ -491,10 +539,18 @@ class AWSManagerWindow(Window):
         panelLayout.addSpacerItem(QSpacerItem(20, 30, QSizePolicy.Minimum, QSizePolicy.Fixed))
         
         
+        # Default profile label
+        defaultProfileLabel = CaptionLabel("DEFAULT PROFILE")
+        defaultProfileLabel.setStyleSheet("color: #94A3B8; font-weight: 600; letter-spacing: 0.5px;")
+        panelLayout.addWidget(defaultProfileLabel)
+
         self.accountCombo = ComboBox()
-        for account in AWS_ACCOUNTS:
+        defaultIndex = 0
+        for i, account in enumerate(AWS_ACCOUNTS):
             self.accountCombo.addItem(f"{account['name']}", userData=account)
-        self.accountCombo.setCurrentIndex(0)
+            if account['name'] == 'dev-test-perf':
+                defaultIndex = i
+        self.accountCombo.setCurrentIndex(defaultIndex)
         panelLayout.addWidget(self.accountCombo)
         
         panelLayout.addSpacerItem(QSpacerItem(20, 15, QSizePolicy.Minimum, QSizePolicy.Fixed))
@@ -515,12 +571,14 @@ class AWSManagerWindow(Window):
         panelLayout.addSpacerItem(QSpacerItem(20, 10, QSizePolicy.Minimum, QSizePolicy.Fixed))
         
         # View logs link
+        debug_log("initUI: creating viewLogsLink HyperlinkButton")
         self.viewLogsLink = HyperlinkButton(
             url="",
             text="View Logs",
             parent=self.controlPanel
         )
         self.viewLogsLink.clicked.connect(self.onViewLogsClicked)
+        debug_log("initUI: viewLogsLink.clicked connected to onViewLogsClicked")
         panelLayout.addWidget(self.viewLogsLink, 0, Qt.AlignCenter)
         
         panelLayout.addSpacerItem(QSpacerItem(20, 20, QSizePolicy.Minimum, QSizePolicy.Fixed))
@@ -663,30 +721,30 @@ class AWSManagerWindow(Window):
     
     def startCredentialProcess(self, account, mfa_code):
         """Start credential process"""
-        
+
         self.is_running = True
         self.startButton.hide()
         self.stopButton.show()
         self.accountCombo.setEnabled(False)
-        
+
         self.updateStatus("🔄 Starting...")
-        
+
         InfoBar.success(
             title="Starting",
-            content=f"Connecting to {account['name']}",
+            content=f"Default: {account['name']} | All profiles will be renewed",
             orient=Qt.Horizontal,
             isClosable=True,
             position=InfoBarPosition.TOP,
             duration=2000,
             parent=self
         )
-        
+
         signals = WorkerSignals()
         signals.status_update.connect(self.updateStatus)
         signals.progress_update.connect(self.updateProgress)
         signals.finished.connect(self.onProcessFinished)
-        
-        self.worker = AWSCredentialWorker(account, mfa_code, CONFIG, signals)
+
+        self.worker = AWSCredentialWorker(account['name'], AWS_ACCOUNTS, mfa_code, CONFIG, signals)
         self.worker.start()
     
     def onStopClicked(self):
@@ -697,19 +755,56 @@ class AWSManagerWindow(Window):
     
     def onViewLogsClicked(self):
         """Open log file"""
+        debug_log("onViewLogsClicked: clicked")
         log_file = Path(__file__).parent / "aws_manager.log"
-        if log_file.exists():
-            os.startfile(str(log_file))
-        else:
-            InfoBar.warning(
-                title="No Logs",
-                content="Start the service first",
-                orient=Qt.Horizontal,
-                isClosable=True,
-                position=InfoBarPosition.TOP,
-                duration=2000,
-                parent=self
-            )
+        debug_log(f"onViewLogsClicked: log_file = {log_file.resolve()}")
+        debug_log(f"onViewLogsClicked: log_file.exists() = {log_file.exists()}")
+
+        if not log_file.exists():
+            debug_log("onViewLogsClicked: file does not exist, creating placeholder")
+            try:
+                log_file.parent.mkdir(parents=True, exist_ok=True)
+                with open(log_file, "a", encoding="utf-8") as f:
+                    timestamp = datetime.now().strftime("%H:%M:%S")
+                    f.write(f"[{timestamp}] Log file created. Start the service to see activity.\n")
+                debug_log("onViewLogsClicked: placeholder created successfully")
+            except Exception as e:
+                debug_log(f"onViewLogsClicked: failed to create placeholder: {e}\n{traceback.format_exc()}")
+                InfoBar.error(
+                    title="Cannot Create Log",
+                    content=str(e),
+                    orient=Qt.Horizontal,
+                    isClosable=True,
+                    position=InfoBarPosition.TOP,
+                    duration=4000,
+                    parent=self
+                )
+                return
+
+        # Open with notepad directly - .log files often have no file association,
+        # which causes os.startfile to silently do nothing.
+        try:
+            debug_log(f"onViewLogsClicked: launching notepad for {log_file}")
+            subprocess.Popen(["notepad.exe", str(log_file)])
+            debug_log("onViewLogsClicked: notepad launched successfully")
+        except Exception as e:
+            debug_log(f"onViewLogsClicked: notepad failed: {e}\n{traceback.format_exc()}")
+            # Fallback to os.startfile in case notepad isn't on PATH for some reason
+            try:
+                debug_log("onViewLogsClicked: trying os.startfile fallback")
+                os.startfile(str(log_file))
+                debug_log("onViewLogsClicked: os.startfile fallback returned")
+            except Exception as e2:
+                debug_log(f"onViewLogsClicked: os.startfile fallback failed: {e2}\n{traceback.format_exc()}")
+                InfoBar.error(
+                    title="Cannot Open Log",
+                    content=f"{e2}",
+                    orient=Qt.Horizontal,
+                    isClosable=True,
+                    position=InfoBarPosition.TOP,
+                    duration=4000,
+                    parent=self
+                )
     
     def updateStatus(self, message):
         """Update status label"""

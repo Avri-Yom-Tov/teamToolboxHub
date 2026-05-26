@@ -15,6 +15,11 @@ $consolePtr = [Console.Window]::GetConsoleWindow()
 $Global:IsRunning = $false
 $Global:CurrentJob = $null
 $Global:StopRequested = $false
+$Global:Runspace = $null
+$Global:RunspacePS = $null
+$Global:RunspaceHandle = $null
+$Global:RunspaceOutQueue = $null
+$Global:RunspaceCancelEvent = $null
 
 # Configuration - Update these with your values ..
 
@@ -458,10 +463,9 @@ $xaml = @'
                         <GradientStop Color="#2563EB" Offset="1" />
                     </LinearGradientBrush>
                 </Border.Background>
-                <DockPanel Height="44" Margin="6,0">
-                    <Button DockPanel.Dock="Right" Name="CloseButton" Style="{StaticResource TitleBarButtonStyle}" Tag="Close" Margin="0,0,4,0" />
-                    <Button DockPanel.Dock="Right" Name="MinimizeButton" Style="{StaticResource TitleBarButtonStyle}" Tag="Minimize" />
-                    <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
+                <Grid Height="44" Margin="6,0">
+                    <!-- Centered title sits in its own layer so the right-side buttons don't push it off-center -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                         <Border Width="22" Height="22" CornerRadius="5" Margin="0,0,10,0">
                             <Border.Background>
                                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
@@ -475,7 +479,12 @@ $xaml = @'
                                    Foreground="White" FontWeight="SemiBold"
                                    FontFamily="Segoe UI" FontSize="14" />
                     </StackPanel>
-                </DockPanel>
+                    <!-- Window buttons on the right -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <Button Name="MinimizeButton" Style="{StaticResource TitleBarButtonStyle}" Tag="Minimize" />
+                        <Button Name="CloseButton" Style="{StaticResource TitleBarButtonStyle}" Tag="Close" Margin="0,0,4,0" />
+                    </StackPanel>
+                </Grid>
             </Border>
 
             <!-- Main Content -->
@@ -845,13 +854,32 @@ $Global:WPFGui.StartButton.Add_Click({
 
         Write-StatusBar -Text "Starting AWS credential process..." -Indeterminate
 
-        # Convert PSCustomObjects to hashtables so Start-Job's serializer doesn't flatten the list
+        # Convert PSCustomObjects to hashtables (kept for parity with prior job serialization shape)
         $accountsForJob = @($accountList | ForEach-Object { @{ AccountId = [string]$_.AccountId; Name = [string]$_.Name } })
 
-        # Start background job using PowerShell jobs instead of runspaces for simplicity
-        $Global:CurrentJob = Start-Job -ScriptBlock {
+        # Shared cross-thread primitives for the runspace
+        $Global:RunspaceOutQueue = New-Object 'System.Collections.Concurrent.ConcurrentQueue[string]'
+        $Global:RunspaceCancelEvent = New-Object System.Threading.ManualResetEventSlim($false)
+
+        # Background work runs in a runspace (in-process) instead of Start-Job (separate process).
+        # Protocol with the UI is unchanged: lines pushed to $OutQueue are drained by the timer
+        # and routed through Write-Log / Write-StatusBar exactly as before.
+        $Global:Runspace = [runspacefactory]::CreateRunspace()
+        $Global:Runspace.ApartmentState = 'STA'
+        $Global:Runspace.ThreadOptions = 'ReuseThread'
+        $Global:Runspace.Open()
+        $Global:Runspace.SessionStateProxy.SetVariable('OutQueue', $Global:RunspaceOutQueue)
+        $Global:Runspace.SessionStateProxy.SetVariable('CancelEvent', $Global:RunspaceCancelEvent)
+
+        $Global:RunspacePS = [powershell]::Create()
+        $Global:RunspacePS.Runspace = $Global:Runspace
+
+        $null = $Global:RunspacePS.AddScript({
             param($AccountsBag, $DefaultProfileName, $MFACode, $user, $role_name, $source_profile, $main_iam_acct_num, $default_region, $MFA_SESSION, $DEFAULT_SESSION, $CODEARTIFACT_SESSION, $codeartifact_source_profile, $m2_config_file)
             $Accounts = $AccountsBag.Accounts
+
+            # Replacement for Write-Output: enqueue a line for the UI thread to pick up.
+            function Write-Output { param([Parameter(ValueFromPipeline=$true,Position=0)][string]$Line) process { $OutQueue.Enqueue([string]$Line) } }
 
             function addNewLine {
                 param([string] $target_profile_name)
@@ -893,6 +921,14 @@ $Global:WPFGui.StartButton.Add_Click({
                 aws configure set aws_access_key_id $token_creds.Credentials.AccessKeyId --profile "$MFA_SESSION"
                 aws configure set aws_secret_access_key $token_creds.Credentials.SecretAccessKey --profile "$MFA_SESSION"
                 aws configure set aws_session_token $token_creds.Credentials.SessionToken --profile "$MFA_SESSION"
+
+                # Reorder so the user-selected default profile is renewed first.
+                # This makes the [default] mirror usable as soon as possible,
+                # without waiting for the other profiles to finish.
+                $defaultAcct = $Accounts | Where-Object { $_.Name -eq $DefaultProfileName } | Select-Object -First 1
+                if ($defaultAcct) {
+                    $Accounts = @($defaultAcct) + @($Accounts | Where-Object { $_.Name -ne $DefaultProfileName })
+                }
 
                 # Pre-set region for each profile
                 foreach ($acct in $Accounts) {
@@ -1000,9 +1036,11 @@ $Global:WPFGui.StartButton.Add_Click({
 
                         Write-Output "PROGRESS:STOP:All profiles renewed. Waiting for next renewal... ($hour $hourText remaining)"
 
-                        # Sleep for 59 minutes with periodic progress updates
+                        # Sleep for 59 minutes with periodic progress updates.
+                        # Use a cancellable wait so Stop/Restart break out of the sleep immediately
+                        # instead of waiting up to a full minute.
                         for ($minute = 59; $minute -gt 0; $minute--) {
-                            Start-Sleep -Seconds 60
+                            if ($CancelEvent.Wait(60000)) { return }
                             if ($minute % 10 -eq 0) {
                                 Write-Output "PROGRESS:STOP:Waiting... ($hour $hourText, $minute minutes remaining)"
                             }
@@ -1018,9 +1056,25 @@ $Global:WPFGui.StartButton.Add_Click({
             } catch {
                 Write-Output "Error: $($_.Exception.Message)"
             }
-        } -ArgumentList @{ Accounts = $accountsForJob }, $defaultProfileName, $mfaCode, $user, $role_name, $source_profile, $main_iam_acct_num, $default_region, $MFA_SESSION, $DEFAULT_SESSION, $CODEARTIFACT_SESSION, $codeartifact_source_profile, $m2_config_file
+        })
 
-        # Monitor the job
+        $null = $Global:RunspacePS.AddArgument(@{ Accounts = $accountsForJob })
+        $null = $Global:RunspacePS.AddArgument($defaultProfileName)
+        $null = $Global:RunspacePS.AddArgument($mfaCode)
+        $null = $Global:RunspacePS.AddArgument($user)
+        $null = $Global:RunspacePS.AddArgument($role_name)
+        $null = $Global:RunspacePS.AddArgument($source_profile)
+        $null = $Global:RunspacePS.AddArgument($main_iam_acct_num)
+        $null = $Global:RunspacePS.AddArgument($default_region)
+        $null = $Global:RunspacePS.AddArgument($MFA_SESSION)
+        $null = $Global:RunspacePS.AddArgument($DEFAULT_SESSION)
+        $null = $Global:RunspacePS.AddArgument($CODEARTIFACT_SESSION)
+        $null = $Global:RunspacePS.AddArgument($codeartifact_source_profile)
+        $null = $Global:RunspacePS.AddArgument($m2_config_file)
+
+        $Global:RunspaceHandle = $Global:RunspacePS.BeginInvoke()
+
+        # Monitor the runspace
         $Global:JobTimer = New-Object System.Windows.Threading.DispatcherTimer
         $Global:JobTimer.Interval = [TimeSpan]::FromSeconds(2)
         $Global:JobTimer.Add_Tick({
@@ -1030,14 +1084,14 @@ $Global:WPFGui.StartButton.Add_Click({
                     if ($Global:JobTimer) { $Global:JobTimer.Stop() }
                     return
                 }
-                
-                if ($Global:CurrentJob) {
+
+                if ($Global:RunspacePS) {
                     try {
-                        $jobOutput = Receive-Job -Job $Global:CurrentJob -ErrorAction SilentlyContinue
-                        if ($jobOutput) {
-                            foreach ($line in $jobOutput) {
+                        # Drain any output the worker has enqueued since last tick
+                        if ($Global:RunspaceOutQueue) {
+                            $line = $null
+                            while ($Global:RunspaceOutQueue.TryDequeue([ref]$line)) {
                                 try {
-                                    # Check if this is a progress message
                                     if ($line -match '^PROGRESS:INDETERMINATE:(.+)$') {
                                         $progressText = $matches[1]
                                         Write-StatusBar -Text $progressText -Indeterminate
@@ -1054,19 +1108,18 @@ $Global:WPFGui.StartButton.Add_Click({
                                 }
                             }
                         }
-                        
-                        if ($Global:CurrentJob.State -eq 'Completed' -or $Global:CurrentJob.State -eq 'Failed' -or $Global:CurrentJob.State -eq 'Stopped') {
+
+                        $state = $Global:RunspacePS.InvocationStateInfo.State
+                        if ($state -eq 'Completed' -or $state -eq 'Failed' -or $state -eq 'Stopped') {
                             if ($Global:JobTimer) { $Global:JobTimer.Stop() }
                             $Global:IsRunning = $false
-                            
-                            # Stop the indeterminate progress bar
+
                             try {
                                 Write-StatusBar -Progress 0 -Text "Process completed"
                             } catch {
                                 # Ignore status update errors
                             }
-                            
-                            # Safely update UI controls
+
                             try {
                                 if ($Global:WPFGui.StartButton) { $Global:WPFGui.StartButton.IsEnabled = $true }
                                 if ($Global:WPFGui.StopButton) { $Global:WPFGui.StopButton.IsEnabled = $false }
@@ -1074,18 +1127,19 @@ $Global:WPFGui.StartButton.Add_Click({
                             } catch {
                                 # Ignore UI update errors
                             }
-                            
-                            if ($Global:CurrentJob.State -eq 'Failed') {
+
+                            if ($state -eq 'Failed') {
                                 try {
-                                    if ($Global:CurrentJob.ChildJobs -and $Global:CurrentJob.ChildJobs.Count -gt 0) {
-                                        $reason = $Global:CurrentJob.ChildJobs[0].JobStateInfo.Reason
-                                        if ($reason) {
-                                            Write-Log "Job failed: $reason"
-                                        } else {
-                                            Write-Log "Job failed: Unknown reason"
-                                        }
+                                    $reason = $null
+                                    if ($Global:RunspacePS.InvocationStateInfo.Reason) {
+                                        $reason = $Global:RunspacePS.InvocationStateInfo.Reason.Message
+                                    } elseif ($Global:RunspacePS.Streams.Error.Count -gt 0) {
+                                        $reason = $Global:RunspacePS.Streams.Error[0].Exception.Message
+                                    }
+                                    if ($reason) {
+                                        Write-Log "Job failed: $reason"
                                     } else {
-                                        Write-Log "Job failed: No detailed error information available"
+                                        Write-Log "Job failed: Unknown reason"
                                     }
                                 } catch {
                                     try {
@@ -1095,14 +1149,24 @@ $Global:WPFGui.StartButton.Add_Click({
                                     }
                                 }
                             }
-                            
+
                             try {
-                                Remove-Job -Job $Global:CurrentJob -Force -ErrorAction SilentlyContinue
+                                if ($Global:RunspaceHandle) {
+                                    $Global:RunspacePS.EndInvoke($Global:RunspaceHandle) | Out-Null
+                                }
                             } catch {
-                                # Ignore cleanup errors
+                                # EndInvoke surfaces terminating errors; already logged above
                             }
+                            try { $Global:RunspacePS.Dispose() } catch { }
+                            try { $Global:Runspace.Dispose() } catch { }
+                            try { if ($Global:RunspaceCancelEvent) { $Global:RunspaceCancelEvent.Dispose() } } catch { }
+                            $Global:RunspacePS = $null
+                            $Global:Runspace = $null
+                            $Global:RunspaceHandle = $null
+                            $Global:RunspaceOutQueue = $null
+                            $Global:RunspaceCancelEvent = $null
                             $Global:CurrentJob = $null
-                            
+
                             try {
                                 Write-StatusBar -Progress 0 -Text "Ready"
                             } catch {
@@ -1110,29 +1174,31 @@ $Global:WPFGui.StartButton.Add_Click({
                             }
                         }
                     } catch {
-                        # Error accessing job, likely job was removed
+                        # Error accessing runspace, likely already disposed
                         if ($Global:JobTimer) { $Global:JobTimer.Stop() }
+                        $Global:RunspacePS = $null
+                        $Global:Runspace = $null
+                        $Global:RunspaceHandle = $null
                         $Global:CurrentJob = $null
                         $Global:IsRunning = $false
                     }
                 } else {
-                    # Job is null, stop the timer
+                    # Runspace is null, stop the timer
                     if ($Global:JobTimer) { $Global:JobTimer.Stop() }
                 }
             } catch {
-                # Complete error handler - stop everything
                 try {
                     Write-Host "Error in job monitoring: $($_.Exception.Message)"
                 } catch {
                     # Even console output failed
                 }
-                
+
                 try {
                     if ($Global:JobTimer) { $Global:JobTimer.Stop() }
                 } catch {
                     # Ignore timer stop errors
                 }
-                
+
                 $Global:IsRunning = $false
                 $Global:CurrentJob = $null
             }
@@ -1155,19 +1221,37 @@ $Global:WPFGui.StopButton.Add_Click({
         Write-Log "Stop requested by user. Stopping process..."
         Write-StatusBar -Progress 0 -Text "Stopping process..."
         $Global:WPFGui.StopButton.IsEnabled = $false
-        
-        if ($Global:CurrentJob) {
+
+        # Signal the worker's cancellable wait so a long Start-Sleep returns immediately
+        if ($Global:RunspaceCancelEvent) {
+            try { $Global:RunspaceCancelEvent.Set() } catch { }
+        }
+
+        if ($Global:RunspacePS) {
             try {
-                Stop-Job -Job $Global:CurrentJob -ErrorAction SilentlyContinue
-                Start-Sleep -Milliseconds 500  # Give job time to stop
-                Remove-Job -Job $Global:CurrentJob -Force -ErrorAction SilentlyContinue
+                $Global:RunspacePS.Stop()
+                if ($Global:RunspaceHandle) {
+                    try { $Global:RunspacePS.EndInvoke($Global:RunspaceHandle) | Out-Null } catch { }
+                }
+                $Global:RunspacePS.Dispose()
             } catch {
-                Write-Log "Warning: Error during job cleanup: $($_.Exception.Message)"
+                Write-Log "Warning: Error during runspace cleanup: $($_.Exception.Message)"
             } finally {
-                $Global:CurrentJob = $null
+                $Global:RunspacePS = $null
             }
         }
-        
+        if ($Global:Runspace) {
+            try { $Global:Runspace.Dispose() } catch { }
+            $Global:Runspace = $null
+        }
+        if ($Global:RunspaceCancelEvent) {
+            try { $Global:RunspaceCancelEvent.Dispose() } catch { }
+            $Global:RunspaceCancelEvent = $null
+        }
+        $Global:RunspaceHandle = $null
+        $Global:RunspaceOutQueue = $null
+        $Global:CurrentJob = $null
+
         # Stop the timer
         if ($Global:JobTimer) {
             try {
@@ -1177,7 +1261,7 @@ $Global:WPFGui.StopButton.Add_Click({
                 # Ignore timer cleanup errors
             }
         }
-        
+
         $Global:IsRunning = $false
         $Global:WPFGui.StartButton.IsEnabled = $true
         $Global:WPFGui.RestartButton.IsEnabled = $true
@@ -1192,19 +1276,36 @@ $Global:WPFGui.RestartButton.Add_Click({
         if ($Global:IsRunning) {
             $Global:StopRequested = $true
             Write-Log "Restarting process..."
-            
-            if ($Global:CurrentJob) {
+
+            if ($Global:RunspaceCancelEvent) {
+                try { $Global:RunspaceCancelEvent.Set() } catch { }
+            }
+
+            if ($Global:RunspacePS) {
                 try {
-                    Stop-Job -Job $Global:CurrentJob -ErrorAction SilentlyContinue
-                    Start-Sleep -Milliseconds 500  # Give job time to stop
-                    Remove-Job -Job $Global:CurrentJob -Force -ErrorAction SilentlyContinue
+                    $Global:RunspacePS.Stop()
+                    if ($Global:RunspaceHandle) {
+                        try { $Global:RunspacePS.EndInvoke($Global:RunspaceHandle) | Out-Null } catch { }
+                    }
+                    $Global:RunspacePS.Dispose()
                 } catch {
-                    Write-Log "Warning: Error during job cleanup: $($_.Exception.Message)"
+                    Write-Log "Warning: Error during runspace cleanup: $($_.Exception.Message)"
                 } finally {
-                    $Global:CurrentJob = $null
+                    $Global:RunspacePS = $null
                 }
             }
-            
+            if ($Global:Runspace) {
+                try { $Global:Runspace.Dispose() } catch { }
+                $Global:Runspace = $null
+            }
+            if ($Global:RunspaceCancelEvent) {
+                try { $Global:RunspaceCancelEvent.Dispose() } catch { }
+                $Global:RunspaceCancelEvent = $null
+            }
+            $Global:RunspaceHandle = $null
+            $Global:RunspaceOutQueue = $null
+            $Global:CurrentJob = $null
+
             # Stop the timer
             if ($Global:JobTimer) {
                 try {
@@ -1214,7 +1315,7 @@ $Global:WPFGui.RestartButton.Add_Click({
                     # Ignore timer cleanup errors
                 }
             }
-            
+
             Start-Sleep -Seconds 1
         }
         
@@ -1278,12 +1379,26 @@ $Global:WPFGui.UI.Add_Closing({
             }
         }
         
-        # Clean up jobs
-        if ($Global:CurrentJob) {
-            Stop-Job -Job $Global:CurrentJob -ErrorAction SilentlyContinue
-            Remove-Job -Job $Global:CurrentJob -Force -ErrorAction SilentlyContinue
-            $Global:CurrentJob = $null
+        # Clean up runspace
+        if ($Global:RunspaceCancelEvent) {
+            try { $Global:RunspaceCancelEvent.Set() } catch { }
         }
+        if ($Global:RunspacePS) {
+            try { $Global:RunspacePS.Stop() } catch { }
+            try { $Global:RunspacePS.Dispose() } catch { }
+            $Global:RunspacePS = $null
+        }
+        if ($Global:Runspace) {
+            try { $Global:Runspace.Dispose() } catch { }
+            $Global:Runspace = $null
+        }
+        if ($Global:RunspaceCancelEvent) {
+            try { $Global:RunspaceCancelEvent.Dispose() } catch { }
+            $Global:RunspaceCancelEvent = $null
+        }
+        $Global:RunspaceHandle = $null
+        $Global:RunspaceOutQueue = $null
+        $Global:CurrentJob = $null
     } catch {
         # Ignore errors during cleanup
     }
@@ -1301,13 +1416,12 @@ try {
 } catch {
     Write-Host "Error showing GUI: $($_.Exception.Message)" -ForegroundColor Red
     Write-Host "Full error details: $($_.Exception.ToString())" -ForegroundColor Red
-    if ($Global:CurrentJob) {
-        try {
-            Stop-Job -Job $Global:CurrentJob -ErrorAction SilentlyContinue
-            Remove-Job -Job $Global:CurrentJob -Force -ErrorAction SilentlyContinue
-        } catch {
-            # Ignore cleanup errors
-        }
+    if ($Global:RunspacePS) {
+        try { $Global:RunspacePS.Stop() } catch { }
+        try { $Global:RunspacePS.Dispose() } catch { }
+    }
+    if ($Global:Runspace) {
+        try { $Global:Runspace.Dispose() } catch { }
     }
     Read-Host "Press Enter to exit"
 }
