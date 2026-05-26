@@ -464,21 +464,22 @@ $xaml = @'
                     </LinearGradientBrush>
                 </Border.Background>
                 <Grid Height="44" Margin="6,0">
-                    <!-- Centered title sits in its own layer so the right-side buttons don't push it off-center -->
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <Border Width="22" Height="22" CornerRadius="5" Margin="0,0,10,0">
-                            <Border.Background>
-                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                    <GradientStop Color="#FF9900" Offset="0" />
-                                    <GradientStop Color="#FF6600" Offset="1" />
-                                </LinearGradientBrush>
-                            </Border.Background>
-                            <TextBlock Text="&#x26A1;" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White" />
-                        </Border>
-                        <TextBlock Text="AWS Credential Manager" VerticalAlignment="Center"
-                                   Foreground="White" FontWeight="SemiBold"
-                                   FontFamily="Segoe UI" FontSize="16" />
-                    </StackPanel>
+                    <!-- Icon pinned to the left -->
+                    <Border Width="22" Height="22" CornerRadius="5" Margin="12,0,0,0"
+                            HorizontalAlignment="Left" VerticalAlignment="Center">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#FF9900" Offset="0" />
+                                <GradientStop Color="#FF6600" Offset="1" />
+                            </LinearGradientBrush>
+                        </Border.Background>
+                        <TextBlock Text="&#x26A1;" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White" />
+                    </Border>
+                    <!-- Centered title sits in its own layer so the side elements don't push it off-center -->
+                    <TextBlock Text="AWS Credential Manager"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                               Foreground="White" FontWeight="SemiBold"
+                               FontFamily="Segoe UI" FontSize="16" />
                     <!-- Window buttons on the right -->
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                         <Button Name="MinimizeButton" Style="{StaticResource TitleBarButtonStyle}" Tag="Minimize" />
