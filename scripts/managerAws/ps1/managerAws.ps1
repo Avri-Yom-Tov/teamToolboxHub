@@ -18,29 +18,23 @@ $Global:StopRequested = $false
 
 # Configuration - Update these with your values ..
 
-$user = 'Avraham.Yom-Tov' 
+$user = 'Avraham.Yom-Tov'
 $DEFAULT_SESSION = "default"
 $default_region = 'us-west-2'
-$source_profile = 'nice-identity' 
+$source_profile = 'nice-identity'
 $main_iam_acct_num = '736763050260'
 $MFA_SESSION = "$source_profile-mfa-session"
 $CODEARTIFACT_SESSION = "default-codeartifact"
 $role_name = 'GroupAccess-Developers-Recording'
-$target_account_num_codeartifact = '369498121101' 
+$codeartifact_source_profile = 'dev-test-perf'
 $m2_config_file = "C:\Users\$env:UserName\.m2\settings.xml"
-$target_profile_name_codeartifact = 'GroupAccess-NICE-Developers'
 $mfa_secret_key = $env:awsSecretHere
 
 $Global:AccountList = @(
     [PSCustomObject]@{ AccountId = 730335479582; Name = "rec-dev" }
     [PSCustomObject]@{ AccountId = 211125581625; Name = "rec-test" }
     [PSCustomObject]@{ AccountId = 339712875220; Name = "rec-perf" }
-    [PSCustomObject]@{ AccountId = 918987959928; Name = "production" }
-    [PSCustomObject]@{ AccountId = 946153222386; Name = "wfostaging" }
-    [PSCustomObject]@{ AccountId = 891377049518; Name = "rec-staging" }
     [PSCustomObject]@{ AccountId = 934137132601; Name = "dev-test-perf" }
-    [PSCustomObject]@{ AccountId = 654654430801; Name = "production-rec" }
-    [PSCustomObject]@{ AccountId = 891377174057; Name = "production-rec-uk" }
 )
 
 try {
@@ -502,7 +496,7 @@ $xaml = @'
                                    Foreground="#0F172A" FontFamily="Segoe UI"
                                    Margin="0,0,0,18" />
 
-                        <TextBlock Text="ACCOUNT" FontSize="10.5" FontWeight="SemiBold"
+                        <TextBlock Text="DEFAULT PROFILE" FontSize="10.5" FontWeight="SemiBold"
                                    Foreground="#94A3B8" FontFamily="Segoe UI" Margin="0,0,0,7" />
                         <ComboBox Name="AccountComboBox" DisplayMemberPath="Name" Margin="0,0,0,24" />
 
@@ -755,9 +749,16 @@ try {
         }
     }
 
-    # Populate account dropdown
+    # Populate account dropdown - the user's selection becomes the "default" profile
     $Global:WPFGui.AccountComboBox.ItemsSource = $Global:AccountList
-    $Global:WPFGui.AccountComboBox.SelectedIndex = 0
+    $defaultProfileIndex = 0
+    for ($i = 0; $i -lt $Global:AccountList.Count; $i++) {
+        if ($Global:AccountList[$i].Name -eq 'dev-test-perf') {
+            $defaultProfileIndex = $i
+            break
+        }
+    }
+    $Global:WPFGui.AccountComboBox.SelectedIndex = $defaultProfileIndex
 
     # Initialize system tray functionality
     Initialize-SystemTray
@@ -798,12 +799,18 @@ $Global:WPFGui.StartButton.Add_Click({
 
         $selectedAccount = $Global:WPFGui.AccountComboBox.SelectedItem
         if (-not $selectedAccount) {
-            [System.Windows.MessageBox]::Show("Please select an account first.", "No Account Selected", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning)
+            [System.Windows.MessageBox]::Show("Please select a default profile first.", "No Profile Selected", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning)
+            return
+        }
+
+        $accountList = $Global:AccountList
+        if (-not $accountList -or $accountList.Count -eq 0) {
+            [System.Windows.MessageBox]::Show("No accounts configured.", "No Accounts", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning)
             return
         }
 
         $mfaCode = $null
-        
+
         if ([string]::IsNullOrWhiteSpace($mfa_secret_key)) {
             $mfaCode = Show-MFADialog
             if (-not $mfaCode) {
@@ -818,28 +825,34 @@ $Global:WPFGui.StartButton.Add_Click({
         } else {
             Write-Log "Generating MFA code automatically from secret key..."
             $mfaCode = New-TOTPCode -Secret $mfa_secret_key
-            
+
             if (-not $mfaCode) {
                 Write-Log "Failed to generate MFA code. Please check your secret key."
                 [System.Windows.MessageBox]::Show("Failed to generate MFA code automatically. Please check your secret key configuration.", "MFA Generation Error", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Error)
                 return
             }
-            
+
             Write-Log "MFA code generated successfully: $mfaCode"
         }
 
-        Write-Log "Starting AWS credential process for $($selectedAccount.Name) ($($selectedAccount.AccountId))"
-        
+        $defaultProfileName = $selectedAccount.Name
+        $profileNames = ($accountList | ForEach-Object { $_.Name }) -join ', '
+        Write-Log "Default profile: $defaultProfileName. Renewing for: $profileNames"
+
         $Global:WPFGui.StartButton.IsEnabled = $false
         $Global:WPFGui.StopButton.IsEnabled = $true
         $Global:WPFGui.RestartButton.IsEnabled = $false
 
         Write-StatusBar -Text "Starting AWS credential process..." -Indeterminate
-        
+
+        # Convert PSCustomObjects to hashtables so Start-Job's serializer doesn't flatten the list
+        $accountsForJob = @($accountList | ForEach-Object { @{ AccountId = [string]$_.AccountId; Name = [string]$_.Name } })
+
         # Start background job using PowerShell jobs instead of runspaces for simplicity
         $Global:CurrentJob = Start-Job -ScriptBlock {
-            param($SelectedAccount, $MFACode, $user, $target_profile_name_codeartifact, $target_account_num_codeartifact, $role_name, $source_profile, $main_iam_acct_num, $default_region, $MFA_SESSION, $DEFAULT_SESSION, $CODEARTIFACT_SESSION, $m2_config_file)
-            
+            param($AccountsBag, $DefaultProfileName, $MFACode, $user, $role_name, $source_profile, $main_iam_acct_num, $default_region, $MFA_SESSION, $DEFAULT_SESSION, $CODEARTIFACT_SESSION, $codeartifact_source_profile, $m2_config_file)
+            $Accounts = $AccountsBag.Accounts
+
             function addNewLine {
                 param([string] $target_profile_name)
                 $creds_file = "$env:USERPROFILE\.aws\credentials"
@@ -855,14 +868,10 @@ $Global:WPFGui.StartButton.Add_Click({
                     }
                 }
             }
-            
+
             try {
-                $target_account_num = $SelectedAccount.AccountId
-                $target_profile_name = $SelectedAccount.Name
                 $mfa_device = "arn:aws:iam::" + $main_iam_acct_num + ":mfa/" + $user
                 $token_expiration_seconds = 129600 # 36 Hours
-                $target_role = "arn:aws:iam::" + $target_account_num + ":role/" + $role_name
-                $target_role_codeartifact = "arn:aws:iam::" + $target_account_num_codeartifact + ":role/" + $role_name
 
                 # Get session token with MFA
                 Write-Output "PROGRESS:INDETERMINATE:Getting session token with MFA..."
@@ -872,111 +881,144 @@ $Global:WPFGui.StartButton.Add_Click({
                     Write-Output "AWS CLI Error: $token_result"
                     throw "Failed to get session token. Please check your MFA code and AWS configuration."
                 }
-                
+
                 try {
                     $token_creds = $token_result | ConvertFrom-Json
                 } catch {
                     Write-Output "Error parsing AWS response: $token_result"
                     throw "Failed to parse AWS response. Please check your AWS configuration."
                 }
-                
-                Write-Output "PROGRESS:INDETERMINATE:Configuring AWS credentials..."
-                # Set AWS credentials via CLI
+
+                Write-Output "PROGRESS:INDETERMINATE:Configuring MFA session credentials..."
                 aws configure set aws_access_key_id $token_creds.Credentials.AccessKeyId --profile "$MFA_SESSION"
                 aws configure set aws_secret_access_key $token_creds.Credentials.SecretAccessKey --profile "$MFA_SESSION"
                 aws configure set aws_session_token $token_creds.Credentials.SessionToken --profile "$MFA_SESSION"
-                aws configure set region $default_region --profile $target_profile_name
-                aws configure set region $default_region --profile $target_profile_name_codeartifact
 
-                Write-Output "Successfully cached token for $token_expiration_seconds seconds .."
+                # Pre-set region for each profile
+                foreach ($acct in $Accounts) {
+                    aws configure set region $default_region --profile $acct.Name
+                }
+
+                Write-Output "Successfully cached MFA token for $token_expiration_seconds seconds."
                 Write-Output "PROGRESS:INDETERMINATE:Starting credential renewal loop..."
 
                 # Start the renewal loop for 36 hours
                 for ($hour = 36; $hour -gt 0; $hour--) {
                     try {
                         $hourText = if ($hour -eq 1) { "hour" } else { "hours" }
-                        
-                        # Use indeterminate progress bar during actual renewal operations
-                        Write-Output "PROGRESS:INDETERMINATE:Renewing credentials... ($hour $hourText remaining)"
 
-                        $creds = aws sts assume-role --role-arn $target_role --role-session-name $user --profile "$MFA_SESSION" --query "Credentials" | ConvertFrom-Json
-                        $creds_codeartifact = aws sts assume-role --role-arn $target_role_codeartifact --role-session-name $user --profile "$MFA_SESSION" --query "Credentials" | ConvertFrom-Json
+                        Write-Output "PROGRESS:INDETERMINATE:Renewing credentials for all profiles... ($hour $hourText remaining)"
 
-                        if ($LASTEXITCODE -eq 0) {
-                            addNewLine $target_profile_name 
-                            
-                            # Set AWS credentials via CLI
-                            aws configure set aws_access_key_id $creds.AccessKeyId --profile "$DEFAULT_SESSION"
-                            aws configure set aws_secret_access_key $creds.SecretAccessKey --profile "$DEFAULT_SESSION"
-                            aws configure set aws_session_token $creds.SessionToken --profile "$DEFAULT_SESSION"
-                            aws configure set region $default_region --profile "$DEFAULT_SESSION"
-                            
-                            Write-Output "$target_profile_name profile has been updated in ~/.aws/credentials."
-                            
-                            addNewLine $target_profile_name_codeartifact
-                            
-                            aws configure set aws_access_key_id $creds_codeartifact.AccessKeyId --profile "$CODEARTIFACT_SESSION"
-                            aws configure set aws_secret_access_key $creds_codeartifact.SecretAccessKey --profile "$CODEARTIFACT_SESSION"
-                            aws configure set aws_session_token $creds_codeartifact.SessionToken --profile "$CODEARTIFACT_SESSION"
-                            aws configure set region $default_region --profile "$CODEARTIFACT_SESSION"
+                        $codeartifact_creds = $null
+                        $renewalFailed = $false
 
-                            Write-Output "$target_profile_name_codeartifact profile has been updated in ~/.aws/credentials."
-                            
-                            # Get CodeArtifact token
-                            $CODEARTIFACT_AUTH_TOKEN = (aws codeartifact get-authorization-token --domain nice-devops --domain-owner 369498121101 --query authorizationToken --output text --region us-west-2 --profile "$CODEARTIFACT_SESSION")
-                            Write-Output "Generated CodeArtifact Token."
-                            
-                            # Update Maven settings.xml
+                        foreach ($acct in $Accounts) {
+                            $target_profile_name = $acct.Name
+                            $target_account_num = $acct.AccountId
+                            $target_role = "arn:aws:iam::" + $target_account_num + ":role/" + $role_name
+
+                            Write-Output "Renewing $target_profile_name access keys..."
+                            $creds = aws sts assume-role --role-arn $target_role --role-session-name $user --profile "$MFA_SESSION" --query "Credentials" | ConvertFrom-Json
+
+                            if ($LASTEXITCODE -eq 0 -and $creds) {
+                                addNewLine $target_profile_name
+
+                                aws configure set aws_access_key_id $creds.AccessKeyId --profile "$target_profile_name"
+                                aws configure set aws_secret_access_key $creds.SecretAccessKey --profile "$target_profile_name"
+                                aws configure set aws_session_token $creds.SessionToken --profile "$target_profile_name"
+                                aws configure set region $default_region --profile "$target_profile_name"
+
+                                Write-Output "$target_profile_name profile has been updated in ~/.aws/credentials."
+
+                                # If this is the user-selected default profile, mirror credentials into [default]
+                                if ($target_profile_name -eq $DefaultProfileName) {
+                                    addNewLine $DEFAULT_SESSION
+                                    aws configure set aws_access_key_id $creds.AccessKeyId --profile "$DEFAULT_SESSION"
+                                    aws configure set aws_secret_access_key $creds.SecretAccessKey --profile "$DEFAULT_SESSION"
+                                    aws configure set aws_session_token $creds.SessionToken --profile "$DEFAULT_SESSION"
+                                    aws configure set region $default_region --profile "$DEFAULT_SESSION"
+                                    Write-Output "Mirrored $target_profile_name credentials into [$DEFAULT_SESSION] profile."
+                                }
+
+                                if ($target_profile_name -eq $codeartifact_source_profile) {
+                                    $codeartifact_creds = $creds
+                                }
+                            } else {
+                                Write-Output "Failed to assume role for $target_profile_name (Account: $target_account_num)"
+                                $renewalFailed = $true
+                            }
+                        }
+
+                        # Use the dev-test-perf credentials to fetch CodeArtifact token + update Maven/NPM
+                        if ($codeartifact_creds) {
                             try {
-                                if (Test-Path $m2_config_file) {
-                                    $x = [xml] (Get-Content $m2_config_file)
-                                    $nodeId = $x.settings.servers.server | Where-Object { $_.id -eq "cxone-codeartifact" }
-                                    if ($nodeId) { $nodeId.password = $CODEARTIFACT_AUTH_TOKEN.ToString() }
-                                    $nodeId1 = $x.settings.servers.server | Where-Object { $_.id -eq "platform-utils" }
-                                    if ($nodeId1) { $nodeId1.password = $CODEARTIFACT_AUTH_TOKEN.ToString() }
-                                    $nodeId2 = $x.settings.servers.server | Where-Object { $_.id -eq "plugins-codeartifact" }
-                                    if ($nodeId2) { $nodeId2.password = $CODEARTIFACT_AUTH_TOKEN.ToString() }
-                                    $x.Save($m2_config_file)
-                                    Write-Output "Updated $m2_config_file with CodeArtifact Token."
+                                addNewLine $CODEARTIFACT_SESSION
+
+                                aws configure set aws_access_key_id $codeartifact_creds.AccessKeyId --profile "$CODEARTIFACT_SESSION"
+                                aws configure set aws_secret_access_key $codeartifact_creds.SecretAccessKey --profile "$CODEARTIFACT_SESSION"
+                                aws configure set aws_session_token $codeartifact_creds.SessionToken --profile "$CODEARTIFACT_SESSION"
+                                aws configure set region $default_region --profile "$CODEARTIFACT_SESSION"
+
+                                $CODEARTIFACT_AUTH_TOKEN = (aws codeartifact get-authorization-token --domain nice-devops --domain-owner 369498121101 --query authorizationToken --output text --region us-west-2 --profile "$CODEARTIFACT_SESSION")
+                                Write-Output "Generated CodeArtifact Token using $codeartifact_source_profile credentials."
+
+                                # Update Maven settings.xml
+                                try {
+                                    if (Test-Path $m2_config_file) {
+                                        $x = [xml] (Get-Content $m2_config_file)
+                                        $nodeId = $x.settings.servers.server | Where-Object { $_.id -eq "cxone-codeartifact" }
+                                        if ($nodeId) { $nodeId.password = $CODEARTIFACT_AUTH_TOKEN.ToString() }
+                                        $nodeId1 = $x.settings.servers.server | Where-Object { $_.id -eq "platform-utils" }
+                                        if ($nodeId1) { $nodeId1.password = $CODEARTIFACT_AUTH_TOKEN.ToString() }
+                                        $nodeId2 = $x.settings.servers.server | Where-Object { $_.id -eq "plugins-codeartifact" }
+                                        if ($nodeId2) { $nodeId2.password = $CODEARTIFACT_AUTH_TOKEN.ToString() }
+                                        $x.Save($m2_config_file)
+                                        Write-Output "Updated $m2_config_file with CodeArtifact Token."
+                                    }
+                                } catch {
+                                    Write-Output "No settings.xml found or using old version: $($_.Exception.Message)"
+                                }
+
+                                # Update NPM config
+                                try {
+                                    npm config set registry "https://nice-devops-369498121101.d.codeartifact.us-west-2.amazonaws.com/npm/cxone-npm/" 2>$null
+                                    npm config set "//nice-devops-369498121101.d.codeartifact.us-west-2.amazonaws.com/npm/cxone-npm/:_authToken=${CODEARTIFACT_AUTH_TOKEN}" 2>$null
+                                    Write-Output "Updated NPM with CodeArtifact Token."
+                                } catch {
+                                    Write-Output "NPM not installed or error: $($_.Exception.Message)"
                                 }
                             } catch {
-                                Write-Output "No settings.xml found or using old version: $($_.Exception.Message)"
-                            }
-                            
-                            # Update NPM config
-                            try {
-                                npm config set registry "https://nice-devops-369498121101.d.codeartifact.us-west-2.amazonaws.com/npm/cxone-npm/" 2>$null
-                                npm config set "//nice-devops-369498121101.d.codeartifact.us-west-2.amazonaws.com/npm/cxone-npm/:_authToken=${CODEARTIFACT_AUTH_TOKEN}" 2>$null
-                                Write-Output "Updated NPM with CodeArtifact Token."
-                            } catch {
-                                Write-Output "NPM not installed or error: $($_.Exception.Message)"
-                            }
-
-                            # Stop indeterminate progress during waiting period
-                            Write-Output "PROGRESS:STOP:Credentials renewed successfully. Waiting for next renewal... ($hour $hourText remaining)"
-
-                            # Sleep for 59 minutes with periodic progress updates
-                            for ($minute = 59; $minute -gt 0; $minute--) {
-                                Start-Sleep -Seconds 60
-                                if ($minute % 10 -eq 0) {
-                                    Write-Output "PROGRESS:STOP:Waiting... ($hour $hourText, $minute minutes remaining)"
-                                }
+                                Write-Output "Error generating CodeArtifact token: $($_.Exception.Message)"
                             }
                         } else {
-                            throw "Failed to assume role"
+                            Write-Output "Skipping CodeArtifact: $codeartifact_source_profile credentials not available."
+                        }
+
+                        if ($renewalFailed) {
+                            Write-Output "One or more profiles failed to renew. Continuing with next cycle."
+                        }
+
+                        Write-Output "PROGRESS:STOP:All profiles renewed. Waiting for next renewal... ($hour $hourText remaining)"
+
+                        # Sleep for 59 minutes with periodic progress updates
+                        for ($minute = 59; $minute -gt 0; $minute--) {
+                            Start-Sleep -Seconds 60
+                            if ($minute % 10 -eq 0) {
+                                Write-Output "PROGRESS:STOP:Waiting... ($hour $hourText, $minute minutes remaining)"
+                            }
                         }
                     } catch {
                         Write-Output "Error during renewal: $($_.Exception.Message)"
                         break
                     }
                 }
-                
+
                 Write-Output "PROGRESS:STOP:MFA token credentials have expired after 36 hours."
 
             } catch {
                 Write-Output "Error: $($_.Exception.Message)"
             }
-        } -ArgumentList $selectedAccount, $mfaCode, $user, $target_profile_name_codeartifact, $target_account_num_codeartifact, $role_name, $source_profile, $main_iam_acct_num, $default_region, $MFA_SESSION, $DEFAULT_SESSION, $CODEARTIFACT_SESSION, $m2_config_file
+        } -ArgumentList @{ Accounts = $accountsForJob }, $defaultProfileName, $mfaCode, $user, $role_name, $source_profile, $main_iam_acct_num, $default_region, $MFA_SESSION, $DEFAULT_SESSION, $CODEARTIFACT_SESSION, $codeartifact_source_profile, $m2_config_file
 
         # Monitor the job
         $Global:JobTimer = New-Object System.Windows.Threading.DispatcherTimer

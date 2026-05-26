@@ -19,12 +19,14 @@ $Global:StopRequested = $false
 # Configuration - Update these with your values ..
 
 $user = 'Avraham.Yom-Tov'
+$DEFAULT_SESSION = "default"
 $default_region = 'us-west-2'
 $source_profile = 'nice-identity'
 $main_iam_acct_num = '736763050260'
 $MFA_SESSION = "$source_profile-mfa-session"
 $CODEARTIFACT_SESSION = "default-codeartifact"
 $role_name = 'GroupAccess-Developers-Recording'
+$codeartifact_source_profile = 'dev-test-perf'
 $m2_config_file = "C:\Users\$env:UserName\.m2\settings.xml"
 $mfa_secret_key = $env:awsSecretHere
 
@@ -494,10 +496,9 @@ $xaml = @'
                                    Foreground="#0F172A" FontFamily="Segoe UI"
                                    Margin="0,0,0,18" />
 
-                        <TextBlock Text="PROFILES" FontSize="10.5" FontWeight="SemiBold"
+                        <TextBlock Text="DEFAULT PROFILE" FontSize="10.5" FontWeight="SemiBold"
                                    Foreground="#94A3B8" FontFamily="Segoe UI" Margin="0,0,0,7" />
-                        <TextBlock Name="ProfilesList" FontSize="12" Foreground="#0F172A"
-                                   FontFamily="Segoe UI" TextWrapping="Wrap" Margin="0,0,0,24" />
+                        <ComboBox Name="AccountComboBox" DisplayMemberPath="Name" Margin="0,0,0,24" />
 
                         <Border Height="1" Background="#F1F5F9" Margin="0,0,0,20" />
 
@@ -694,7 +695,7 @@ try {
     Write-Host "GUI window created successfully"
     
     # Get references to controls
-    $Global:WPFGui.ProfilesList = $Global:WPFGui.UI.FindName("ProfilesList")
+    $Global:WPFGui.AccountComboBox = $Global:WPFGui.UI.FindName("AccountComboBox")
     $Global:WPFGui.StartButton = $Global:WPFGui.UI.FindName("StartButton")
     $Global:WPFGui.StopButton = $Global:WPFGui.UI.FindName("StopButton")
     $Global:WPFGui.RestartButton = $Global:WPFGui.UI.FindName("RestartButton")
@@ -739,7 +740,7 @@ try {
     $Global:UpdateTimer.Start()
 
     # Verify all controls were found
-    $controls = @("ProfilesList", "StartButton", "StopButton", "RestartButton", "LogOutput", "ProgressBar", "StatusText", "CloseButton", "MinimizeButton")
+    $controls = @("AccountComboBox", "StartButton", "StopButton", "RestartButton", "LogOutput", "ProgressBar", "StatusText", "CloseButton", "MinimizeButton")
     foreach ($control in $controls) {
         if (-not $Global:WPFGui[$control]) {
             Write-Warning "Control $control not found!"
@@ -748,8 +749,16 @@ try {
         }
     }
 
-    # Display the list of profiles that will be generated
-    $Global:WPFGui.ProfilesList.Text = ($Global:AccountList | ForEach-Object { $_.Name }) -join ', '
+    # Populate account dropdown - the user's selection becomes the "default" profile
+    $Global:WPFGui.AccountComboBox.ItemsSource = $Global:AccountList
+    $defaultProfileIndex = 0
+    for ($i = 0; $i -lt $Global:AccountList.Count; $i++) {
+        if ($Global:AccountList[$i].Name -eq 'dev-test-perf') {
+            $defaultProfileIndex = $i
+            break
+        }
+    }
+    $Global:WPFGui.AccountComboBox.SelectedIndex = $defaultProfileIndex
 
     # Initialize system tray functionality
     Initialize-SystemTray
@@ -788,6 +797,12 @@ $Global:WPFGui.StartButton.Add_Click({
             return
         }
 
+        $selectedAccount = $Global:WPFGui.AccountComboBox.SelectedItem
+        if (-not $selectedAccount) {
+            [System.Windows.MessageBox]::Show("Please select a default profile first.", "No Profile Selected", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning)
+            return
+        }
+
         $accountList = $Global:AccountList
         if (-not $accountList -or $accountList.Count -eq 0) {
             [System.Windows.MessageBox]::Show("No accounts configured.", "No Accounts", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning)
@@ -820,8 +835,9 @@ $Global:WPFGui.StartButton.Add_Click({
             Write-Log "MFA code generated successfully: $mfaCode"
         }
 
+        $defaultProfileName = $selectedAccount.Name
         $profileNames = ($accountList | ForEach-Object { $_.Name }) -join ', '
-        Write-Log "Starting AWS credential process for: $profileNames"
+        Write-Log "Default profile: $defaultProfileName. Renewing for: $profileNames"
 
         $Global:WPFGui.StartButton.IsEnabled = $false
         $Global:WPFGui.StopButton.IsEnabled = $true
@@ -834,7 +850,7 @@ $Global:WPFGui.StartButton.Add_Click({
 
         # Start background job using PowerShell jobs instead of runspaces for simplicity
         $Global:CurrentJob = Start-Job -ScriptBlock {
-            param($AccountsBag, $MFACode, $user, $role_name, $source_profile, $main_iam_acct_num, $default_region, $MFA_SESSION, $CODEARTIFACT_SESSION, $codeartifact_source_profile, $m2_config_file)
+            param($AccountsBag, $DefaultProfileName, $MFACode, $user, $role_name, $source_profile, $main_iam_acct_num, $default_region, $MFA_SESSION, $DEFAULT_SESSION, $CODEARTIFACT_SESSION, $codeartifact_source_profile, $m2_config_file)
             $Accounts = $AccountsBag.Accounts
 
             function addNewLine {
@@ -914,6 +930,16 @@ $Global:WPFGui.StartButton.Add_Click({
 
                                 Write-Output "$target_profile_name profile has been updated in ~/.aws/credentials."
 
+                                # If this is the user-selected default profile, mirror credentials into [default]
+                                if ($target_profile_name -eq $DefaultProfileName) {
+                                    addNewLine $DEFAULT_SESSION
+                                    aws configure set aws_access_key_id $creds.AccessKeyId --profile "$DEFAULT_SESSION"
+                                    aws configure set aws_secret_access_key $creds.SecretAccessKey --profile "$DEFAULT_SESSION"
+                                    aws configure set aws_session_token $creds.SessionToken --profile "$DEFAULT_SESSION"
+                                    aws configure set region $default_region --profile "$DEFAULT_SESSION"
+                                    Write-Output "Mirrored $target_profile_name credentials into [$DEFAULT_SESSION] profile."
+                                }
+
                                 if ($target_profile_name -eq $codeartifact_source_profile) {
                                     $codeartifact_creds = $creds
                                 }
@@ -992,7 +1018,7 @@ $Global:WPFGui.StartButton.Add_Click({
             } catch {
                 Write-Output "Error: $($_.Exception.Message)"
             }
-        } -ArgumentList @{ Accounts = $accountsForJob }, $mfaCode, $user, $role_name, $source_profile, $main_iam_acct_num, $default_region, $MFA_SESSION, $CODEARTIFACT_SESSION, 'dev-test-perf', $m2_config_file
+        } -ArgumentList @{ Accounts = $accountsForJob }, $defaultProfileName, $mfaCode, $user, $role_name, $source_profile, $main_iam_acct_num, $default_region, $MFA_SESSION, $DEFAULT_SESSION, $CODEARTIFACT_SESSION, $codeartifact_source_profile, $m2_config_file
 
         # Monitor the job
         $Global:JobTimer = New-Object System.Windows.Threading.DispatcherTimer
