@@ -549,8 +549,8 @@ class AWSManagerWindow(Window):
         # CodeArtifact token options - unchecked by default, side by side
         tokenRow = QHBoxLayout()
         tokenRow.setSpacing(16)
-        self.npmTokenCheck = CheckBox("Npm Token")
-        self.pipTokenCheck = CheckBox("Pip Token")
+        self.npmTokenCheck = CheckBox("npm")
+        self.pipTokenCheck = CheckBox("pip")
         tokenRow.addStretch()
         tokenRow.addWidget(self.npmTokenCheck)
         tokenRow.addWidget(self.pipTokenCheck)
