@@ -510,14 +510,14 @@ class AWSManagerWindow(Window):
         class CloudLogoWidget(QWidget):
             def __init__(self, parent=None):
                 super().__init__(parent)
-                self.setFixedSize(110, 95)
+                self.setFixedSize(150, 130)
 
             def paintEvent(self, event):
                 painter = QPainter(self)
                 painter.setRenderHint(QPainter.Antialiasing)
                 painter.setPen(QColor(96, 165, 250, 230))
                 font = painter.font()
-                font.setPointSize(50)
+                font.setPointSize(58)
                 font.setBold(True)
                 painter.setFont(font)
                 painter.drawText(self.rect(), Qt.AlignCenter, "☁")
@@ -529,7 +529,7 @@ class AWSManagerWindow(Window):
         # Title - styled, below the logo
         titleLabel = SubtitleLabel("AWS Credentials Manager")
         titleLabel.setAlignment(Qt.AlignCenter)
-        titleLabel.setStyleSheet("font: 600 16px 'Segoe UI'; letter-spacing: 0.5px; color: #60A5FA;")
+        titleLabel.setStyleSheet("font: 600 14px 'Segoe UI'; letter-spacing: 0.5px; color: #60A5FA;")
         panelLayout.addWidget(titleLabel)
 
         panelLayout.addSpacerItem(QSpacerItem(20, 30, QSizePolicy.Minimum, QSizePolicy.Fixed))
