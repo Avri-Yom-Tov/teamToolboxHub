@@ -11,6 +11,7 @@ import subprocess
 import threading
 import time
 import json
+import configparser
 import hmac
 import hashlib
 import struct
@@ -139,13 +140,15 @@ class WorkerSignals(QObject):
 class AWSCredentialWorker(threading.Thread):
     """Background worker for AWS credential management"""
 
-    def __init__(self, default_profile_name, accounts, mfa_code, config, signals):
+    def __init__(self, default_profile_name, accounts, mfa_code, config, signals, npm_token=False, pip_token=False):
         super().__init__()
         self.default_profile_name = default_profile_name
         self.accounts = accounts
         self.mfa_code = mfa_code
         self.config = config
         self.signals = signals
+        self.npm_token = npm_token
+        self.pip_token = pip_token
         self.should_stop = False
         self.daemon = True
         
@@ -171,40 +174,62 @@ class AWSCredentialWorker(threading.Thread):
                 shell=True,
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=30,
+                creationflags=subprocess.CREATE_NO_WINDOW
             )
             return result.returncode == 0, result.stdout if result.returncode == 0 else result.stderr
         except Exception as e:
             return False, str(e)
     
-    def add_new_line(self, profile_name):
-        """Add new line to credentials and config files to prevent CLI issues"""
-        home = Path.home()
-        
-        creds_file = home / ".aws" / "credentials"
-        if creds_file.exists():
-            try:
-                content = creds_file.read_text(encoding='utf-8')
-                if profile_name not in content:
-                    with open(creds_file, 'a', encoding='utf-8') as f:
-                        f.write("\r\n")
-            except Exception as e:
-                self.log(f"Error adding newline to credentials: {e}")
-        
-        config_file = home / ".aws" / "config"
-        if config_file.exists():
-            try:
-                content = config_file.read_text(encoding='utf-8')
-                if profile_name not in content:
-                    with open(config_file, 'a', encoding='utf-8') as f:
-                        f.write("\r\n")
-            except Exception as e:
-                self.log(f"Error adding newline to config: {e}")
+    def set_profile(self, profile, creds, region):
+        """Write credentials + region directly to ~/.aws files.
+        Replaces 4 'aws configure set' CLI spawns (~1s each) with instant file writes."""
+        aws_dir = Path.home() / ".aws"
+        aws_dir.mkdir(exist_ok=True)
+
+        cp = configparser.ConfigParser()
+        cp.read(aws_dir / "credentials", encoding='utf-8')
+        if not cp.has_section(profile):
+            cp.add_section(profile)
+        cp[profile]["aws_access_key_id"] = creds["AccessKeyId"]
+        cp[profile]["aws_secret_access_key"] = creds["SecretAccessKey"]
+        cp[profile]["aws_session_token"] = creds["SessionToken"]
+        with open(aws_dir / "credentials", "w", encoding='utf-8') as f:
+            cp.write(f)
+
+        cp = configparser.ConfigParser()
+        cp.read(aws_dir / "config", encoding='utf-8')
+        section = "default" if profile == "default" else f"profile {profile}"
+        if not cp.has_section(section):
+            cp.add_section(section)
+        cp[section]["region"] = region
+        with open(aws_dir / "config", "w", encoding='utf-8') as f:
+            cp.write(f)
     
+    def clear_unchecked_tokens(self):
+        """Delete token files for unchecked options - like clearTokens.bat"""
+        targets = []
+        if not self.pip_token:
+            appdata = os.environ.get("APPDATA", "")
+            if appdata:
+                targets.append(Path(appdata) / "pip" / "pip.ini")
+            targets.append(Path.home() / "pip" / "pip.ini")
+        if not self.npm_token:
+            targets.append(Path.home() / ".npmrc")
+
+        for f in targets:
+            try:
+                if f.exists():
+                    f.unlink()
+                    self.log(f"Deleted {f}")
+            except Exception as e:
+                self.log(f"Failed to delete {f}: {e}")
+
     def run(self):
         """Main worker thread logic - Following PowerShell script flow"""
         try:
             self.signals.progress_update.emit(True)
+            self.clear_unchecked_tokens()
             self.signals.status_update.emit("🔐 Authenticating with MFA...")
 
             user = self.config['user']
@@ -244,13 +269,7 @@ class AWSCredentialWorker(threading.Thread):
 
             self.signals.status_update.emit("⚙️ Configuring MFA session...")
 
-            self.run_aws_command(f'aws configure set aws_access_key_id {token_creds["Credentials"]["AccessKeyId"]} --profile {MFA_SESSION}')
-            self.run_aws_command(f'aws configure set aws_secret_access_key {token_creds["Credentials"]["SecretAccessKey"]} --profile {MFA_SESSION}')
-            self.run_aws_command(f'aws configure set aws_session_token {token_creds["Credentials"]["SessionToken"]} --profile {MFA_SESSION}')
-
-            # Pre-set region for each profile
-            for acct in self.accounts:
-                self.run_aws_command(f'aws configure set region {default_region} --profile {acct["name"]}')
+            self.set_profile(MFA_SESSION, token_creds["Credentials"], default_region)
 
             self.log(f"Successfully cached token for {token_expiration_seconds} seconds ..")
 
@@ -283,78 +302,47 @@ class AWSCredentialWorker(threading.Thread):
 
                     creds = json.loads(output)
 
-                    self.add_new_line(target_profile_name)
-
-                    self.run_aws_command(f'aws configure set aws_access_key_id {creds["AccessKeyId"]} --profile {target_profile_name}')
-                    self.run_aws_command(f'aws configure set aws_secret_access_key {creds["SecretAccessKey"]} --profile {target_profile_name}')
-                    self.run_aws_command(f'aws configure set aws_session_token {creds["SessionToken"]} --profile {target_profile_name}')
-                    self.run_aws_command(f'aws configure set region {default_region} --profile {target_profile_name}')
-
+                    self.set_profile(target_profile_name, creds, default_region)
                     self.log(f"{target_profile_name} profile has been updated in ~/.aws/credentials.")
 
                     # If this is the user-selected default profile, mirror credentials into [default]
                     if target_profile_name == self.default_profile_name:
-                        self.add_new_line(DEFAULT_SESSION)
-                        self.run_aws_command(f'aws configure set aws_access_key_id {creds["AccessKeyId"]} --profile {DEFAULT_SESSION}')
-                        self.run_aws_command(f'aws configure set aws_secret_access_key {creds["SecretAccessKey"]} --profile {DEFAULT_SESSION}')
-                        self.run_aws_command(f'aws configure set aws_session_token {creds["SessionToken"]} --profile {DEFAULT_SESSION}')
-                        self.run_aws_command(f'aws configure set region {default_region} --profile {DEFAULT_SESSION}')
+                        self.set_profile(DEFAULT_SESSION, creds, default_region)
                         self.log(f"Mirrored {target_profile_name} credentials into [{DEFAULT_SESSION}] profile.")
 
                     if target_profile_name == codeartifact_source_profile:
                         codeartifact_creds = creds
 
-                # Use the dev-test-perf credentials to fetch CodeArtifact token + update Maven/NPM
-                if codeartifact_creds:
+                # Use the dev-test-perf credentials for CodeArtifact (npm/pip) if requested
+                if (self.npm_token or self.pip_token) and codeartifact_creds and not self.should_stop:
                     try:
-                        self.add_new_line(CODEARTIFACT_SESSION)
+                        self.set_profile(CODEARTIFACT_SESSION, codeartifact_creds, default_region)
 
-                        self.run_aws_command(f'aws configure set aws_access_key_id {codeartifact_creds["AccessKeyId"]} --profile {CODEARTIFACT_SESSION}')
-                        self.run_aws_command(f'aws configure set aws_secret_access_key {codeartifact_creds["SecretAccessKey"]} --profile {CODEARTIFACT_SESSION}')
-                        self.run_aws_command(f'aws configure set aws_session_token {codeartifact_creds["SessionToken"]} --profile {CODEARTIFACT_SESSION}')
-                        self.run_aws_command(f'aws configure set region {default_region} --profile {CODEARTIFACT_SESSION}')
+                        if self.npm_token:
+                            cmd_token = f'aws codeartifact get-authorization-token --domain nice-devops --domain-owner 369498121101 --query authorizationToken --output text --region us-west-2 --profile {CODEARTIFACT_SESSION}'
+                            success_token, ca_token = self.run_aws_command(cmd_token)
 
-                        cmd_token = f'aws codeartifact get-authorization-token --domain nice-devops --domain-owner 369498121101 --query authorizationToken --output text --region us-west-2 --profile {CODEARTIFACT_SESSION}'
-                        success_token, ca_token = self.run_aws_command(cmd_token)
+                            if success_token:
+                                self.log(f"Generated CodeArtifact Token using {codeartifact_source_profile} credentials.")
+                                try:
+                                    self.run_aws_command('npm config set registry "https://nice-devops-369498121101.d.codeartifact.us-west-2.amazonaws.com/npm/cxone-npm/"')
+                                    self.run_aws_command(f'npm config set "//nice-devops-369498121101.d.codeartifact.us-west-2.amazonaws.com/npm/cxone-npm/:_authToken={ca_token.strip()}"')
+                                    self.log("Updated NPM with CodeArtifact Token.")
+                                except Exception as e:
+                                    self.log(f"NPM not installed or error: {e}")
+                            else:
+                                self.log(f"Failed to get CodeArtifact token: {ca_token}")
 
-                        if success_token:
-                            self.log(f"Generated CodeArtifact Token using {codeartifact_source_profile} credentials.")
-
-                            try:
-                                import xml.etree.ElementTree as ET
-                                settings_file = Path(f"C:\\Users\\{os.environ.get('USERNAME')}\\.m2\\settings.xml")
-                                if settings_file.exists():
-                                    ET.register_namespace('', 'http://maven.apache.org/SETTINGS/1.0.0')
-                                    tree = ET.parse(settings_file)
-                                    root = tree.getroot()
-
-                                    for server in root.iter():
-                                        if server.tag.endswith('server'):
-                                            server_id = None
-                                            password_elem = None
-                                            for child in server:
-                                                if child.tag.endswith('id'):
-                                                    server_id = child.text
-                                                if child.tag.endswith('password'):
-                                                    password_elem = child
-
-                                            if server_id in ['cxone-codeartifact', 'platform-utils', 'plugins-codeartifact'] and password_elem is not None:
-                                                password_elem.text = ca_token.strip()
-
-                                    tree.write(settings_file, encoding='utf-8', xml_declaration=True)
-                                    self.log(f"Updated {settings_file} with CodeArtifact Token.")
-                            except Exception as e:
-                                self.log(f"No settings.xml found or using old version: {e}")
-
-                            try:
-                                self.run_aws_command('npm config set registry "https://nice-devops-369498121101.d.codeartifact.us-west-2.amazonaws.com/npm/cxone-npm/"')
-                                self.run_aws_command(f'npm config set "//nice-devops-369498121101.d.codeartifact.us-west-2.amazonaws.com/npm/cxone-npm/:_authToken={ca_token.strip()}"')
-                                self.log("Updated NPM with CodeArtifact Token.")
-                            except Exception as e:
-                                self.log(f"NPM not installed or error: {e}")
+                        if self.pip_token:
+                            cmd_pip = f'aws codeartifact login --tool pip --repository cxone-pystore --domain nice-devops --domain-owner 369498121101 --region us-west-2 --profile {CODEARTIFACT_SESSION}'
+                            success_pip, output_pip = self.run_aws_command(cmd_pip)
+                            if success_pip:
+                                self.log("pip authenticated against cxone-pystore.")
+                            else:
+                                self.log(f"pip CodeArtifact login failed: {output_pip}")
                     except Exception as e:
                         self.log(f"Error generating CodeArtifact token: {e}")
-                else:
+                elif self.npm_token or self.pip_token:
                     self.log(f"Skipping CodeArtifact: {codeartifact_source_profile} credentials not available.")
 
                 if renewal_failed:
@@ -366,9 +354,13 @@ class AWSCredentialWorker(threading.Thread):
                 self.log(f"Keep this window open to have your keys renewed every 59 minutes for the next {hours_remaining} {hour_text}.")
 
                 for minute in range(59, 0, -1):
+                    # 1-second granularity so Stop reacts immediately (was a 60s blocking sleep)
+                    for _ in range(60):
+                        if self.should_stop:
+                            break
+                        time.sleep(1)
                     if self.should_stop:
                         break
-                    time.sleep(60)
                     if minute % 10 == 0:
                         self.signals.status_update.emit(f"⏳ Waiting... ({hours_remaining}h, {minute}m)")
 
@@ -551,7 +543,16 @@ class AWSManagerWindow(Window):
                 defaultIndex = i
         self.accountCombo.setCurrentIndex(defaultIndex)
         panelLayout.addWidget(self.accountCombo)
-        
+
+        panelLayout.addSpacerItem(QSpacerItem(20, 10, QSizePolicy.Minimum, QSizePolicy.Fixed))
+
+        # CodeArtifact token options - unchecked by default
+        self.npmTokenCheck = CheckBox("NPM token (CodeArtifact)")
+        panelLayout.addWidget(self.npmTokenCheck)
+
+        self.pipTokenCheck = CheckBox("pip token (CodeArtifact)")
+        panelLayout.addWidget(self.pipTokenCheck)
+
         panelLayout.addSpacerItem(QSpacerItem(20, 15, QSizePolicy.Minimum, QSizePolicy.Fixed))
         
         # Start button - smaller and elegant
@@ -649,6 +650,7 @@ class AWSManagerWindow(Window):
         """Initialize system tray"""
         
         self.trayIcon = QSystemTrayIcon(self)
+        self.trayIcon.setIcon(FIF.CLOUD.icon())
         self.trayIcon.setToolTip("awsAppManager")
         
         trayMenu = QMenu()
@@ -725,6 +727,8 @@ class AWSManagerWindow(Window):
         self.startButton.hide()
         self.stopButton.show()
         self.accountCombo.setEnabled(False)
+        self.npmTokenCheck.setEnabled(False)
+        self.pipTokenCheck.setEnabled(False)
 
         self.updateStatus("🔄 Starting...")
 
@@ -743,7 +747,11 @@ class AWSManagerWindow(Window):
         signals.progress_update.connect(self.updateProgress)
         signals.finished.connect(self.onProcessFinished)
 
-        self.worker = AWSCredentialWorker(account['name'], AWS_ACCOUNTS, mfa_code, CONFIG, signals)
+        self.worker = AWSCredentialWorker(
+            account['name'], AWS_ACCOUNTS, mfa_code, CONFIG, signals,
+            npm_token=self.npmTokenCheck.isChecked(),
+            pip_token=self.pipTokenCheck.isChecked()
+        )
         self.worker.start()
     
     def onStopClicked(self):
@@ -823,6 +831,8 @@ class AWSManagerWindow(Window):
         self.startButton.show()
         self.stopButton.hide()
         self.accountCombo.setEnabled(True)
+        self.npmTokenCheck.setEnabled(True)
+        self.pipTokenCheck.setEnabled(True)
         self.progressRing.hide()
         
         if success:
@@ -855,7 +865,7 @@ class AWSManagerWindow(Window):
             self.hide()
             self.trayIcon.show()
             self.trayIcon.showMessage(
-                # "AWS Credential Manager",
+                "AWS Credential Manager",
                 "Application minimized to system tray",
                 QSystemTrayIcon.Information,
                 2000
