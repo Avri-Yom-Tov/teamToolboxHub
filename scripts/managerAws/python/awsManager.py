@@ -506,30 +506,30 @@ class AWSManagerWindow(Window):
         # Top spacer
         panelLayout.addSpacerItem(QSpacerItem(20, 60, QSizePolicy.Minimum, QSizePolicy.Expanding))
         
-        # Logo - painted cloud
+        # Logo - painted cloud (blue, sized so the glyph can't overflow onto the title)
         class CloudLogoWidget(QWidget):
             def __init__(self, parent=None):
                 super().__init__(parent)
-                self.setFixedSize(100, 80)
+                self.setFixedSize(110, 95)
 
             def paintEvent(self, event):
                 painter = QPainter(self)
                 painter.setRenderHint(QPainter.Antialiasing)
-                painter.setPen(QColor(255, 255, 255, 200))
+                painter.setPen(QColor(96, 165, 250, 230))
                 font = painter.font()
-                font.setPointSize(55)
+                font.setPointSize(48)
                 font.setBold(True)
                 painter.setFont(font)
                 painter.drawText(self.rect(), Qt.AlignCenter, "☁")
 
         panelLayout.addWidget(CloudLogoWidget(), 0, Qt.AlignCenter)
 
-        panelLayout.addSpacerItem(QSpacerItem(20, 12, QSizePolicy.Minimum, QSizePolicy.Fixed))
+        panelLayout.addSpacerItem(QSpacerItem(20, 16, QSizePolicy.Minimum, QSizePolicy.Fixed))
 
         # Title - styled, below the logo
         titleLabel = SubtitleLabel("AWS Credentials Manager")
         titleLabel.setAlignment(Qt.AlignCenter)
-        titleLabel.setStyleSheet("font: 600 17px 'Segoe UI'; letter-spacing: 0.5px;")
+        titleLabel.setStyleSheet("font: 600 16px 'Segoe UI'; letter-spacing: 0.5px; color: #60A5FA;")
         panelLayout.addWidget(titleLabel)
 
         panelLayout.addSpacerItem(QSpacerItem(20, 30, QSizePolicy.Minimum, QSizePolicy.Fixed))
@@ -545,27 +545,31 @@ class AWSManagerWindow(Window):
 
         panelLayout.addSpacerItem(QSpacerItem(20, 10, QSizePolicy.Minimum, QSizePolicy.Fixed))
 
-        # CodeArtifact token options - unchecked by default
+        # CodeArtifact token options - unchecked by default, side by side
+        tokenRow = QHBoxLayout()
+        tokenRow.setSpacing(16)
         self.npmTokenCheck = CheckBox("Npm Token")
-        panelLayout.addWidget(self.npmTokenCheck)
-
         self.pipTokenCheck = CheckBox("Pip Token")
-        panelLayout.addWidget(self.pipTokenCheck)
+        tokenRow.addStretch()
+        tokenRow.addWidget(self.npmTokenCheck)
+        tokenRow.addWidget(self.pipTokenCheck)
+        tokenRow.addStretch()
+        panelLayout.addLayout(tokenRow)
 
         panelLayout.addSpacerItem(QSpacerItem(20, 15, QSizePolicy.Minimum, QSizePolicy.Fixed))
         
-        # Start button - smaller and elegant
+        # Start button - compact, centered
         self.startButton = PrimaryPushButton(FIF.PLAY, "Start")
-        self.startButton.setFixedHeight(36)
+        self.startButton.setFixedSize(150, 36)
         self.startButton.clicked.connect(self.onStartClicked)
-        panelLayout.addWidget(self.startButton)
-        
+        panelLayout.addWidget(self.startButton, 0, Qt.AlignCenter)
+
         # Stop button
         self.stopButton = PushButton(FIF.PAUSE, "Stop")
-        self.stopButton.setFixedHeight(36)
+        self.stopButton.setFixedSize(150, 36)
         self.stopButton.clicked.connect(self.onStopClicked)
         self.stopButton.hide()
-        panelLayout.addWidget(self.stopButton)
+        panelLayout.addWidget(self.stopButton, 0, Qt.AlignCenter)
         
         panelLayout.addSpacerItem(QSpacerItem(20, 10, QSizePolicy.Minimum, QSizePolicy.Fixed))
         
@@ -611,8 +615,10 @@ class AWSManagerWindow(Window):
     def initWindow(self):
         """Initialize window properties"""
         
-        # Set split title bar (like login)
+        # Set split title bar (like login) - no icon/text over the background image
         self.setTitleBar(SplitTitleBar(self))
+        self.titleBar.iconLabel.hide()
+        self.titleBar.titleLabel.hide()
         self.titleBar.raise_()
         
         # self.titleBar.titleLabel.setText("🔐 AWS Credential Manager")
