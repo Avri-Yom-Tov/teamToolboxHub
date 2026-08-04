@@ -506,25 +506,14 @@ class AWSManagerWindow(Window):
         # Top spacer
         panelLayout.addSpacerItem(QSpacerItem(20, 60, QSizePolicy.Minimum, QSizePolicy.Expanding))
         
-        # Logo - painted cloud (blue, sized so the glyph can't overflow onto the title)
-        class CloudLogoWidget(QWidget):
-            def __init__(self, parent=None):
-                super().__init__(parent)
-                self.setFixedSize(150, 130)
+        # Logo - blue fluent cloud icon rendered into a fixed pixmap (can't overflow onto the title)
+        logoLabel = QLabel()
+        logoLabel.setPixmap(FIF.CLOUD.icon(color=QColor("#60A5FA")).pixmap(84, 84))
+        logoLabel.setFixedSize(84, 84)
+        logoLabel.setAlignment(Qt.AlignCenter)
+        panelLayout.addWidget(logoLabel, 0, Qt.AlignCenter)
 
-            def paintEvent(self, event):
-                painter = QPainter(self)
-                painter.setRenderHint(QPainter.Antialiasing)
-                painter.setPen(QColor(96, 165, 250, 230))
-                font = painter.font()
-                font.setPointSize(58)
-                font.setBold(True)
-                painter.setFont(font)
-                painter.drawText(self.rect(), Qt.AlignCenter, "☁")
-
-        panelLayout.addWidget(CloudLogoWidget(), 0, Qt.AlignCenter)
-
-        panelLayout.addSpacerItem(QSpacerItem(20, 16, QSizePolicy.Minimum, QSizePolicy.Fixed))
+        panelLayout.addSpacerItem(QSpacerItem(20, 24, QSizePolicy.Minimum, QSizePolicy.Fixed))
 
         # Title - styled, below the logo
         titleLabel = SubtitleLabel("AWS Credentials Manager")
