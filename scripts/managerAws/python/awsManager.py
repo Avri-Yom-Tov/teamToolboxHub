@@ -52,7 +52,7 @@ debug_log(f"Platform          = {sys.platform}")
 debug_log(f"USERPROFILE       = {os.environ.get('USERPROFILE', '<missing>')}")
 debug_log(f"awsSecretHere set = {bool(os.environ.get('awsSecretHere'))}")
 
-from PyQt5.QtCore import Qt, pyqtSignal, QObject, QSize
+from PyQt5.QtCore import Qt, pyqtSignal, QObject, QSize, QEvent, QTimer
 from PyQt5.QtGui import QIcon, QColor, QPixmap, QPainter, QLinearGradient, QBrush
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSystemTrayIcon, QMenu, QAction, QLabel, QSpacerItem, QSizePolicy
 from qfluentwidgets import (
@@ -62,6 +62,12 @@ from qfluentwidgets import (
     ProgressRing, InfoBar, InfoBarPosition, MessageBox, MessageBoxBase,
     FluentIcon as FIF, SplitTitleBar, CheckBox, HyperlinkButton
 )
+
+def resource_path(name):
+    """Path to bundled resource - works both as script and pyinstaller onefile exe"""
+    base = getattr(sys, "_MEIPASS", str(Path(__file__).parent))
+    return str(Path(base) / name)
+
 
 def isWin11():
     """Check if running on Windows 11"""
@@ -392,7 +398,7 @@ class BackgroundImageWidget(QWidget):
         
     def loadBackgroundImage(self):
         """Load background image"""
-        bg_path = Path(__file__).parent / "background.jpg"
+        bg_path = Path(resource_path("background.jpg"))
         if bg_path.exists():
             self.backgroundPixmap = QPixmap(str(bg_path))
         
@@ -500,40 +506,33 @@ class AWSManagerWindow(Window):
         # Top spacer
         panelLayout.addSpacerItem(QSpacerItem(20, 60, QSizePolicy.Minimum, QSizePolicy.Expanding))
         
-        # Logo - Custom painted cloud
+        # Logo - painted cloud
         class CloudLogoWidget(QWidget):
             def __init__(self, parent=None):
                 super().__init__(parent)
                 self.setFixedSize(100, 80)
-            
+
             def paintEvent(self, event):
                 painter = QPainter(self)
                 painter.setRenderHint(QPainter.Antialiasing)
-                
                 painter.setPen(QColor(255, 255, 255, 200))
                 font = painter.font()
                 font.setPointSize(55)
                 font.setBold(True)
                 painter.setFont(font)
                 painter.drawText(self.rect(), Qt.AlignCenter, "☁")
-        
-        logoWidget = CloudLogoWidget()
-        panelLayout.addWidget(logoWidget, 0, Qt.AlignCenter)
-        
-        panelLayout.addSpacerItem(QSpacerItem(20, 5, QSizePolicy.Minimum, QSizePolicy.Fixed))
-        
-        # Title - centered
-        titleLabel = SubtitleLabel("Aws Credentials Manager")
+
+        panelLayout.addWidget(CloudLogoWidget(), 0, Qt.AlignCenter)
+
+        panelLayout.addSpacerItem(QSpacerItem(20, 12, QSizePolicy.Minimum, QSizePolicy.Fixed))
+
+        # Title - styled, below the logo
+        titleLabel = SubtitleLabel("AWS Credentials Manager")
         titleLabel.setAlignment(Qt.AlignCenter)
+        titleLabel.setStyleSheet("font: 600 17px 'Segoe UI'; letter-spacing: 0.5px;")
         panelLayout.addWidget(titleLabel)
-        
+
         panelLayout.addSpacerItem(QSpacerItem(20, 30, QSizePolicy.Minimum, QSizePolicy.Fixed))
-        
-        
-        # Default profile label
-        defaultProfileLabel = CaptionLabel("DEFAULT PROFILE")
-        defaultProfileLabel.setStyleSheet("color: #94A3B8; font-weight: 600; letter-spacing: 0.5px;")
-        panelLayout.addWidget(defaultProfileLabel)
 
         self.accountCombo = ComboBox()
         defaultIndex = 0
@@ -547,10 +546,10 @@ class AWSManagerWindow(Window):
         panelLayout.addSpacerItem(QSpacerItem(20, 10, QSizePolicy.Minimum, QSizePolicy.Fixed))
 
         # CodeArtifact token options - unchecked by default
-        self.npmTokenCheck = CheckBox("NPM token (CodeArtifact)")
+        self.npmTokenCheck = CheckBox("Npm Token")
         panelLayout.addWidget(self.npmTokenCheck)
 
-        self.pipTokenCheck = CheckBox("pip token (CodeArtifact)")
+        self.pipTokenCheck = CheckBox("Pip Token")
         panelLayout.addWidget(self.pipTokenCheck)
 
         panelLayout.addSpacerItem(QSpacerItem(20, 15, QSizePolicy.Minimum, QSizePolicy.Fixed))
@@ -627,6 +626,8 @@ class AWSManagerWindow(Window):
         """)
         
         # Window properties - fixed size
+        self.setWindowIcon(QIcon(resource_path("managerAws.ico")))
+        self.setWindowTitle("AWS Credential Manager")
         self.setFixedSize(600, 425)
         
         # Center on screen
@@ -650,8 +651,8 @@ class AWSManagerWindow(Window):
         """Initialize system tray"""
         
         self.trayIcon = QSystemTrayIcon(self)
-        self.trayIcon.setIcon(FIF.CLOUD.icon())
-        self.trayIcon.setToolTip("awsAppManager")
+        self.trayIcon.setIcon(QIcon(resource_path("managerAws.ico")))
+        self.trayIcon.setToolTip("AWS Credential Manager")
         
         trayMenu = QMenu()
         
@@ -668,6 +669,21 @@ class AWSManagerWindow(Window):
         self.trayIcon.setContextMenu(trayMenu)
         self.trayIcon.activated.connect(self.onTrayIconActivated)
     
+    def changeEvent(self, event):
+        """Minimize button hides to system tray - same behavior as managerAws.ps1"""
+        if event.type() == QEvent.WindowStateChange and self.isMinimized():
+            event.ignore()
+            QTimer.singleShot(0, self.hide)
+            self.trayIcon.show()
+            self.trayIcon.showMessage(
+                "AWS Credential Manager",
+                "Application minimized to system tray",
+                QSystemTrayIcon.Information,
+                2000
+            )
+            return
+        super().changeEvent(event)
+
     def onTrayIconActivated(self, reason):
         """Handle tray icon activation"""
         if reason == QSystemTrayIcon.DoubleClick:
