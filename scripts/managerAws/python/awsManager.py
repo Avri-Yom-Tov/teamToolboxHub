@@ -517,7 +517,7 @@ class AWSManagerWindow(Window):
                 painter.setRenderHint(QPainter.Antialiasing)
                 painter.setPen(QColor(96, 165, 250, 230))
                 font = painter.font()
-                font.setPointSize(48)
+                font.setPointSize(50)
                 font.setBold(True)
                 painter.setFont(font)
                 painter.drawText(self.rect(), Qt.AlignCenter, "☁")
@@ -541,7 +541,8 @@ class AWSManagerWindow(Window):
             if account['name'] == 'dev-test-perf':
                 defaultIndex = i
         self.accountCombo.setCurrentIndex(defaultIndex)
-        panelLayout.addWidget(self.accountCombo)
+        self.accountCombo.setFixedWidth(190)
+        panelLayout.addWidget(self.accountCombo, 0, Qt.AlignCenter)
 
         panelLayout.addSpacerItem(QSpacerItem(20, 10, QSizePolicy.Minimum, QSizePolicy.Fixed))
 
@@ -560,13 +561,13 @@ class AWSManagerWindow(Window):
         
         # Start button - compact, centered
         self.startButton = PrimaryPushButton(FIF.PLAY, "Start")
-        self.startButton.setFixedSize(150, 36)
+        self.startButton.setFixedSize(110, 32)
         self.startButton.clicked.connect(self.onStartClicked)
         panelLayout.addWidget(self.startButton, 0, Qt.AlignCenter)
 
         # Stop button
         self.stopButton = PushButton(FIF.PAUSE, "Stop")
-        self.stopButton.setFixedSize(150, 36)
+        self.stopButton.setFixedSize(110, 32)
         self.stopButton.clicked.connect(self.onStopClicked)
         self.stopButton.hide()
         panelLayout.addWidget(self.stopButton, 0, Qt.AlignCenter)
