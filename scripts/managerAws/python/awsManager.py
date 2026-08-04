@@ -74,10 +74,9 @@ else:
 
 # Configuration - matching PowerShell script
 AWS_ACCOUNTS = [
-    {"id": "730335479582", "name": "rec-dev"},
-    {"id": "211125581625", "name": "rec-test"},
-    {"id": "339712875220", "name": "rec-perf"},
     {"id": "934137132601", "name": "dev-test-perf"},
+    {"id": "918987959928", "name": "wfoprod"},
+    
 ]
 
 CONFIG = {
