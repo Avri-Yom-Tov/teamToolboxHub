@@ -1,5 +1,6 @@
-# awsManager.ps1 - headless one-shot version of awsManager.py
-# Account 934137132601 (dev-test-perf) -> creds into [dev-test-perf] + [default], then CodeArtifact npm + pip auth.
+# awsManager.ps1 - headless version of awsManager.py
+# Account 934137132601 (dev-test-perf) -> creds into [dev-test-perf] + [default], CodeArtifact npm + pip auth.
+# Renews every 59 min for 36h (MFA session lifetime). Ctrl+C to stop.
 
 $ErrorActionPreference = "Stop"
 
@@ -58,27 +59,33 @@ $token = aws sts get-session-token --serial-number $MfaDevice --duration-seconds
 if (-not $token) { throw "MFA authentication failed" }
 Set-AwsProfile $MfaSession $token.Credentials
 
-# --- Assume role into dev-test-perf ---
-Write-Host "Assuming role in $ProfileName ($AccountId)..."
+# --- Renewal loop: assume-role + CodeArtifact every 59 min while MFA session lives (36h) ---
 $RoleArn = "arn:aws:iam::${AccountId}:role/$RoleName"
-$creds = aws sts assume-role --role-arn $RoleArn --role-session-name $User --profile $MfaSession --query Credentials --output json | ConvertFrom-Json
-if (-not $creds) { throw "assume-role failed" }
+$hoursRemaining = $DurationSec / 3600
 
-Set-AwsProfile $ProfileName $creds
-Set-AwsProfile "default" $creds
-Set-AwsProfile "default-codeartifact" $creds
-Write-Host "Credentials written to [$ProfileName], [default], [default-codeartifact]."
+while ($hoursRemaining -gt 0) {
+    Write-Host "`n[$(Get-Date -Format 'HH:mm:ss')] Assuming role in $ProfileName ($AccountId)..."
+    $creds = aws sts assume-role --role-arn $RoleArn --role-session-name $User --profile $MfaSession --query Credentials --output json | ConvertFrom-Json
+    if (-not $creds) { throw "assume-role failed" }
 
-# --- CodeArtifact: npm ---
-Write-Host "Authenticating npm against CodeArtifact..."
-$caToken = aws codeartifact get-authorization-token --domain nice-devops --domain-owner 369498121101 --query authorizationToken --output text --region us-west-2 --profile default-codeartifact
-npm config set registry "https://nice-devops-369498121101.d.codeartifact.us-west-2.amazonaws.com/npm/cxone-npm/"
-npm config set "//nice-devops-369498121101.d.codeartifact.us-west-2.amazonaws.com/npm/cxone-npm/:_authToken=$($caToken.Trim())"
-Write-Host "npm token set."
+    Set-AwsProfile $ProfileName $creds
+    Set-AwsProfile "default" $creds
+    Set-AwsProfile "default-codeartifact" $creds
+    Write-Host "Credentials written to [$ProfileName], [default], [default-codeartifact]."
 
-# --- CodeArtifact: pip ---
-Write-Host "Authenticating pip against CodeArtifact..."
-aws codeartifact login --tool pip --repository cxone-pystore --domain nice-devops --domain-owner 369498121101 --region us-west-2 --profile default-codeartifact
-Write-Host "pip authenticated."
+    Write-Host "Authenticating npm against CodeArtifact..."
+    $caToken = aws codeartifact get-authorization-token --domain nice-devops --domain-owner 369498121101 --query authorizationToken --output text --region us-west-2 --profile default-codeartifact
+    npm config set registry "https://nice-devops-369498121101.d.codeartifact.us-west-2.amazonaws.com/npm/cxone-npm/"
+    npm config set "//nice-devops-369498121101.d.codeartifact.us-west-2.amazonaws.com/npm/cxone-npm/:_authToken=$($caToken.Trim())"
+    Write-Host "npm token set."
 
-Write-Host "Done. Note: assume-role creds expire in ~1h - rerun script to renew."
+    Write-Host "Authenticating pip against CodeArtifact..."
+    aws codeartifact login --tool pip --repository cxone-pystore --domain nice-devops --domain-owner 369498121101 --region us-west-2 --profile default-codeartifact
+    Write-Host "pip authenticated."
+
+    Write-Host "Next renewal in 59 min. $hoursRemaining h left on MFA session. Keep window open (Ctrl+C to stop)."
+    Start-Sleep -Seconds (59 * 60)
+    $hoursRemaining--
+}
+
+Write-Host "MFA session expired. Rerun script."
